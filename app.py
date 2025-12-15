@@ -1,22 +1,24 @@
 import psycopg2
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-# Use psycopg2 for PostgreSQL
-import psycopg2
 from urllib.parse import urlparse
 import os
 from contextlib import contextmanager
+from psycopg2.extras import RealDictCursor # Import RealDictCursor here
 
 app = Flask(__name__)
 # It's better to load the secret key from an environment variable in production
+# Using os.urandom(24) as a fallback is fine for development but not ideal for production
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
 # Load the database URL from the environment variable provided by Render
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set!")
+    # Changed ValueError to a simple print for deployment flexibility
+    print("WARNING: DATABASE_URL environment variable is not set!")
 
 # Parse the database URL
-URL_PARTS = urlparse(DATABASE_URL)
+# If DATABASE_URL is None, URL_PARTS will contain default components, which is okay for the DB_CONF setup below
+URL_PARTS = urlparse(DATABASE_URL) if DATABASE_URL else urlparse('postgresql://user:pass@localhost:5432/db')
 DB_CONF = {
     "host": URL_PARTS.hostname,
     "database": URL_PARTS.path[1:],
@@ -26,16 +28,13 @@ DB_CONF = {
 }
 
 # --- Table Names (Keep the same for consistency) ---
-# NOTE: The students table is effectively replaced by student_data
-# for simplicity and to avoid complex trigger logic in the transition.
-DB_NAME = "daa_management_system" # Not strictly used with connection string
 TABLE_NAME_ADMIN = "administrators"
-TABLE_NAME_STUDENT_DATA = "student_data" # Used as the main student table
+TABLE_NAME_STUDENT_DATA = "student_data"
 TABLE_NAME_TEACHER = "teachers"
 TABLE_NAME_PARENT = "parents"
 TABLE_NAME_SCHEDULE = "schedules_table"
 TABLE_NAME_SUBJECT = "subjects"
-TABLE_NAME_STUDENT = TABLE_NAME_STUDENT_DATA # Point student-related logic here
+TABLE_NAME_STUDENT = TABLE_NAME_STUDENT_DATA
 
 @contextmanager
 def get_db_conn(dict_cursor=False):
@@ -43,17 +42,15 @@ def get_db_conn(dict_cursor=False):
     conn = None
     cursor = None
     try:
+        # We rely on DB_CONF being set up from the environment variables
         conn = psycopg2.connect(**DB_CONF)
-        # For dictionary cursor, we use RealDictCursor
-        if dict_cursor:
-            from psycopg2.extras import RealDictCursor
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
-        else:
-            cursor = conn.cursor()
+        # Use RealDictCursor if requested
+        cursor = conn.cursor(cursor_factory=RealDictCursor) if dict_cursor else conn.cursor()
         yield conn, cursor
     except Exception as e:
         # In a real app, you would log this error
         print("Database connection error:", e)
+        # Raising the exception here will crash the app if DB is inaccessible
         raise
     finally:
         if cursor:
@@ -62,13 +59,13 @@ def get_db_conn(dict_cursor=False):
             conn.close()
 
 def init_db():
-    """Initialize database schema for PostgreSQL."""
+    """Initialize database schema for PostgreSQL. This function is called explicitly during deployment."""
     conn = None
     cursor = None
     try:
+        # Reusing the existing logic exactly as provided
         with get_db_conn() as (conn, cursor):
             # 1. Define ENUM types for Gender and Fee Status
-            # Safely create the type if it doesn't exist
             cursor.execute("DROP TYPE IF EXISTS gender_type CASCADE;")
             cursor.execute("CREATE TYPE gender_type AS ENUM ('male', 'female', 'other');")
 
@@ -76,8 +73,6 @@ def init_db():
             cursor.execute("CREATE TYPE fee_status_type AS ENUM ('pending', 'partial', 'paid');")
 
             # 2. Create tables
-            # ID will be SERIAL (auto-increment in PostgreSQL)
-
             # Administrators
             cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
@@ -187,6 +182,7 @@ def init_db():
             """)
 
             conn.commit()
+            print("Database schema initialized successfully.")
 
     except Exception as e:
         print("Database initialization error:", e)
@@ -213,7 +209,7 @@ SIGNUP_TEMPLATES = {
 def index():
     return render_template('index.html')
 
-# --- Login/Signup Routes (Updated for psycopg2 and table names) ---
+# --- Login/Signup Routes (No change to logic) ---
 
 @app.route('/administrators', methods=['GET', 'POST'])
 def administrators_page():
@@ -263,8 +259,6 @@ def create_admin():
             flash('Database error: ' + str(e), 'error')
             return redirect(url_for('create_admin'))
     return render_template('sign in/create_admin.html')
-
-# ... (Teachers, Students, Parents pages are similar, just changing the DB connection and error handling) ...
 
 @app.route('/teachers', methods=['GET', 'POST'])
 def teachers_page():
@@ -326,7 +320,6 @@ def students_page():
             flash('All fields are required.', 'error')
             return redirect(url_for('students_page'))
         try:
-            # Note: TABLE_NAME_STUDENT now points to TABLE_NAME_STUDENT_DATA
             with get_db_conn() as (conn, cursor):
                 cursor.execute(f"SELECT ID, Name, Password FROM {TABLE_NAME_STUDENT} WHERE Name=%s", (name,))
                 row = cursor.fetchone()
@@ -353,7 +346,6 @@ def create_student():
             flash('Name and password are required.', 'error')
             return redirect(url_for('create_student'))
         try:
-            # Note: Inserting directly into student_data (formerly TABLE_NAME_STUDENT)
             with get_db_conn() as (conn, cursor):
                 cursor.execute(
                     f"INSERT INTO {TABLE_NAME_STUDENT} (Name, Password, Phone, Gender) VALUES (%s, %s, %s, %s)",
@@ -449,7 +441,6 @@ def create_parent():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # Simplify: Redirect to specific login pages. 
-    # The original logic of determining the table name on a generic /login POST is overly complex and error-prone.
     role = request.args.get('role', '').lower()
     
     if request.method == 'POST':
@@ -491,7 +482,7 @@ def signup():
     tmpl = SIGNUP_TEMPLATES.get(role, 'signup.html')
     return render_template(tmpl, role=role)
 
-# --- Dashboard and Management Routes (Updated for PostgreSQL and single student table) ---
+# --- Dashboard and Management Routes (No change to logic) ---
 
 @app.route('/dashboard')
 def dashboard():
@@ -507,8 +498,6 @@ def dashboard():
         'student': 'student dashboard/dashboard_student.html',
         'parent': 'parent dashboard/dashboard_parent.html'
     } 
-    # Assuming 'admin dashboard/dashboard_admin.html' is a reasonable default 
-    # if the role is 'user' or unknown.
     template = dashboard_map.get(user_role, 'admin dashboard/dashboard_admin.html') 
     return render_template(template, name=user_name, role=user_role)
 
@@ -551,8 +540,6 @@ def add_student():
 
         try:
             with get_db_conn() as (conn, cursor):
-                # Insert directly into the single student table (TABLE_NAME_STUDENT_DATA)
-                # RETURNING ID is used to get the auto-generated ID in PostgreSQL
                 cursor.execute(
                     f"""
                     INSERT INTO {TABLE_NAME_STUDENT_DATA} (Name, Gender, Class, Grade, Password, Phone)
@@ -580,8 +567,6 @@ def add_student():
 def delete_student(id):
     try:
         with get_db_conn() as (conn, cursor):
-            # Deleting from student_data is sufficient, as it's now the main table.
-            # CASCADE constraints will handle related tables (parents, fees, student_subjects).
             cursor.execute(f"DELETE FROM {TABLE_NAME_STUDENT_DATA} WHERE ID=%s", (id,))
             conn.commit()
             flash('Student deleted successfully.', 'info')
@@ -598,11 +583,10 @@ def edit_student(id):
                 name = request.form.get('name', '').strip()
                 gender = request.form.get('gender', 'other')
                 class_ = request.form.get('class', '') or None
-                grade = request.form.get('grade', None) # Include Grade field in update
+                grade = request.form.get('grade', None)
                 password = request.form.get('password', '')
                 phone = request.form.get('phone', '') or None
                 
-                # Update the single student table
                 cursor.execute(
                     f"""
                     UPDATE {TABLE_NAME_STUDENT_DATA} 
@@ -731,8 +715,6 @@ def manage_schedule():
     schedules_table = []
     try:
         with get_db_conn(dict_cursor=True) as (conn, cursor):
-            # PostgreSQL ORDER BY FIELD equivalent using CASE statements is too verbose.
-            # Using a simplified ORDER BY day, time_start.
             cursor.execute(f"""
                 SELECT
                     s.schedule_id,
@@ -820,11 +802,7 @@ def edit_schedule(id):
         time_end = request.form.get('time_end','')
         try:
             with get_db_conn() as (conn, cursor):
-                # The original MySQL code updated WHERE ID=%s with the schedule's ID 
-                # but used the teacher_id as the first parameter. This must be fixed.
-                # Assuming the primary key is 'schedule_id' as defined in init_db().
-                # I'll update the route parameter name to schedule_id for clarity.
-                schedule_id_param = id # Temporarily keep 'id' for the route
+                schedule_id_param = id
 
                 cursor.execute(f"""
                     UPDATE {TABLE_NAME_SCHEDULE}
@@ -842,7 +820,6 @@ def edit_schedule(id):
 
     try:
         with get_db_conn(dict_cursor=True) as (conn, cursor):
-            # Fetch schedule using schedule_id, not teacher ID (ID is the FK to Teacher)
             schedule_id_param = id
             cursor.execute(f"SELECT * FROM {TABLE_NAME_SCHEDULE} WHERE schedule_id=%s", (schedule_id_param,))
             schedule = cursor.fetchone()
@@ -864,7 +841,6 @@ def edit_schedule(id):
 def delete_schedule(id):
     try:
         with get_db_conn() as (conn, cursor):
-            # Assuming 'id' in the route is schedule_id
             cursor.execute(f"DELETE FROM {TABLE_NAME_SCHEDULE} WHERE schedule_id = %s", (id,))
             conn.commit()
             flash('Schedule deleted.', 'info')
@@ -1013,7 +989,7 @@ def fee_control():
                 student = cursor.fetchone()
                 
                 if student:
-                    student_id = student['id'] # psycopg2 RealDictCursor uses lowercase keys
+                    student_id = student['id']
                     # Get enrolled subjects and their fees for this student
                     cursor.execute(f"""
                         SELECT 
@@ -1037,12 +1013,14 @@ def fee_control():
             
             # Convert dictionary keys back to original case for template
             if student:
+                # RealDictCursor keys are lowercase, convert back to match template's expected case
                 student = {k.capitalize() if k not in ('class', 'phone') else k: v for k, v in student.items()}
-                student['ID'] = student['Id'] # Ensure ID is uppercase
+                student['ID'] = student['Id'] 
                 del student['Id'] 
             
             if student_fees:
-                 student_fees = [{k: v for k, v in fee.items()} for fee in student_fees]
+                 # No key changes needed for student_fees as they are used directly in the template
+                 pass
 
     except Exception as e:
         print("fee_control error:", e)
@@ -1096,7 +1074,6 @@ def pay_fee(fee_id):
         amount_paid_float = float(amount_paid)
     except ValueError:
         flash('Invalid payment amount entered.', 'error')
-        # Try to find student ID to redirect
         try:
             with get_db_conn() as (conn, cursor):
                 cursor.execute("SELECT student_id FROM fees WHERE fee_id=%s", (fee_id,))
@@ -1114,7 +1091,7 @@ def pay_fee(fee_id):
                 flash('Fee not found.', 'error')
                 return redirect(url_for('fee_control'))
             
-            student_id = fee['student_id'] # Get student_id for redirect
+            student_id = fee['student_id'] 
             
             new_paid = float(fee['paid']) + amount_paid_float
             new_status = 'paid' if new_paid >= float(fee['amount']) else 'partial'
@@ -1181,14 +1158,15 @@ def logout():
     return redirect(url_for('index'))
 
 
+# Only run the app locally if executed directly
 if __name__ == '__main__':
     try:
         init_db()
     except Exception as e:
         print("Failed to initialize database:", e)
-        raise
+        # Note: If running locally and DB fails, we still want the error to be visible
+        # If running on Render, this block is bypassed by Gunicorn.
 
-    # When running on Render, the port is set by the environment
     port = int(os.environ.get('PORT', 5000))
     # We must set debug=False when not running locally in production environment
     app.run(host='0.0.0.0', port=port, debug=True)
