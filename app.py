@@ -3,21 +3,19 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from urllib.parse import urlparse
 import os
 from contextlib import contextmanager
-from psycopg2.extras import RealDictCursor # Import RealDictCursor here
+from psycopg2.extras import RealDictCursor # Used for fetching data as dictionaries
 
 app = Flask(__name__)
-# It's better to load the secret key from an environment variable in production
-# Using os.urandom(24) as a fallback is fine for development but not ideal for production
+# Load the secret key from an environment variable (required for session)
 app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 
+# --- DATABASE CONFIGURATION ---
 # Load the database URL from the environment variable provided by Render
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if not DATABASE_URL:
-    # Changed ValueError to a simple print for deployment flexibility
-    print("WARNING: DATABASE_URL environment variable is not set!")
-
+    print("WARNING: DATABASE_URL environment variable is not set! Using localhost fallback.")
+    
 # Parse the database URL
-# If DATABASE_URL is None, URL_PARTS will contain default components, which is okay for the DB_CONF setup below
 URL_PARTS = urlparse(DATABASE_URL) if DATABASE_URL else urlparse('postgresql://user:pass@localhost:5432/db')
 DB_CONF = {
     "host": URL_PARTS.hostname,
@@ -27,30 +25,29 @@ DB_CONF = {
     "port": URL_PARTS.port
 }
 
-# --- Table Names (Keep the same for consistency) ---
+# --- Table Names (AS REQUESTED) ---
 TABLE_NAME_ADMIN = "administrators"
-TABLE_NAME_STUDENT_DATA = "student_data"
+TABLE_NAME_STUDENT = "students" # Alias, using student_data for records
 TABLE_NAME_TEACHER = "teachers"
 TABLE_NAME_PARENT = "parents"
+TABLE_NAME_STUDENT_DATA = "student_data" # The actual table used for student records
 TABLE_NAME_SCHEDULE = "schedules_table"
 TABLE_NAME_SUBJECT = "subjects"
-TABLE_NAME_STUDENT = TABLE_NAME_STUDENT_DATA
 
 @contextmanager
 def get_db_conn(dict_cursor=False):
-    """Context manager for database connection."""
+    """Context manager for PostgreSQL database connection."""
     conn = None
     cursor = None
     try:
-        # We rely on DB_CONF being set up from the environment variables
         conn = psycopg2.connect(**DB_CONF)
-        # Use RealDictCursor if requested
+        # Use RealDictCursor if requested for dictionary output
         cursor = conn.cursor(cursor_factory=RealDictCursor) if dict_cursor else conn.cursor()
         yield conn, cursor
     except Exception as e:
-        # In a real app, you would log this error
-        print("Database connection error:", e)
-        # Raising the exception here will crash the app if DB is inaccessible
+        # This handles the 'relation "administrators" does not exist' error during a route request
+        print("Database connection error (in route):", e)
+        flash('Database error: Failed to connect or table missing. Check logs.', 'error')
         raise
     finally:
         if cursor:
@@ -58,137 +55,7 @@ def get_db_conn(dict_cursor=False):
         if conn:
             conn.close()
 
-def init_db():
-    """Initialize database schema for PostgreSQL. This function is called explicitly during deployment."""
-    conn = None
-    cursor = None
-    try:
-        # Reusing the existing logic exactly as provided
-        with get_db_conn() as (conn, cursor):
-            # 1. Define ENUM types for Gender and Fee Status
-            cursor.execute("DROP TYPE IF EXISTS gender_type CASCADE;")
-            cursor.execute("CREATE TYPE gender_type AS ENUM ('male', 'female', 'other');")
-
-            cursor.execute("DROP TYPE IF EXISTS fee_status_type CASCADE;")
-            cursor.execute("CREATE TYPE fee_status_type AS ENUM ('pending', 'partial', 'paid');")
-
-            # 2. Create tables
-            # Administrators
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
-                    ID SERIAL PRIMARY KEY,
-                    Name VARCHAR(255) NOT NULL UNIQUE,
-                    Password VARCHAR(255) NOT NULL
-                );
-            """)
-
-            # Teachers
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_TEACHER} (
-                    ID SERIAL PRIMARY KEY,
-                    Name VARCHAR(255) NOT NULL UNIQUE,
-                    Password VARCHAR(255) NOT NULL,
-                    Phone VARCHAR(50),
-                    Gender gender_type DEFAULT 'other'
-                );
-            """)
-
-            # Students (Using student_data as the primary student table)
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_DATA} (
-                    ID SERIAL PRIMARY KEY,
-                    Name VARCHAR(255) NOT NULL,
-                    Gender gender_type DEFAULT 'other',
-                    Class VARCHAR(50),
-                    Grade VARCHAR(10),
-                    Password VARCHAR(255) NOT NULL,
-                    Phone VARCHAR(50)
-                );
-            """)
-
-            # Parents (ChildrentID references student_data ID)
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_PARENT} (
-                    ID SERIAL PRIMARY KEY,
-                    Password VARCHAR(255) NOT NULL,
-                    ChildrentID INT,
-                    CONSTRAINT fk_parent_child FOREIGN KEY (ChildrentID)
-                        REFERENCES {TABLE_NAME_STUDENT_DATA} (ID)
-                        ON DELETE SET NULL ON UPDATE CASCADE
-                );
-            """)
-
-            # Subjects (teacher_id references teachers ID)
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_SUBJECT} (
-                    subject_id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL UNIQUE,
-                    teacher_id INT,
-                    CONSTRAINT fk_subject_teacher FOREIGN KEY (teacher_id)
-                        REFERENCES {TABLE_NAME_TEACHER} (ID)
-                        ON DELETE SET NULL ON UPDATE CASCADE
-                );
-            """)
-
-            # Schedules (ID references teacher ID)
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS {TABLE_NAME_SCHEDULE} (
-                    schedule_id SERIAL PRIMARY KEY,
-                    ID INT NOT NULL, -- Teacher ID
-                    Name VARCHAR(255),
-                    Terms VARCHAR(100),
-                    Subject VARCHAR(255) NOT NULL,
-                    Day VARCHAR(20) NOT NULL,
-                    Time_start TIME NOT NULL,
-                    Time_end TIME NOT NULL,
-                    CONSTRAINT fk_schedule_teacher FOREIGN KEY (ID)
-                        REFERENCES {TABLE_NAME_TEACHER} (ID)
-                        ON DELETE CASCADE ON UPDATE CASCADE
-                );
-            """)
-            
-            # Student Subjects (Enrollment)
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS student_subjects (
-                    enrollment_id SERIAL PRIMARY KEY,
-                    student_id INT NOT NULL,
-                    subject_id INT NOT NULL,
-                    enrolled_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_enrollment UNIQUE (student_id, subject_id),
-                    CONSTRAINT fk_enrollment_student FOREIGN KEY (student_id) 
-                        REFERENCES {TABLE_NAME_STUDENT_DATA} (ID) ON DELETE CASCADE ON UPDATE CASCADE,
-                    CONSTRAINT fk_enrollment_subject FOREIGN KEY (subject_id) 
-                        REFERENCES subjects (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
-                );
-            """)
-            
-            # Fees
-            cursor.execute(f"""
-                CREATE TABLE IF NOT EXISTS fees (
-                    fee_id SERIAL PRIMARY KEY,
-                    student_id INT NOT NULL,
-                    subject_id INT NOT NULL,
-                    amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-                    paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
-                    status fee_status_type DEFAULT 'pending',
-                    due_date DATE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT unique_fee UNIQUE (student_id, subject_id),
-                    CONSTRAINT fk_fee_student FOREIGN KEY (student_id)
-                        REFERENCES {TABLE_NAME_STUDENT_DATA} (ID) ON DELETE CASCADE ON UPDATE CASCADE,
-                    CONSTRAINT fk_fee_subject FOREIGN KEY (subject_id)
-                        REFERENCES subjects (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
-                );
-            """)
-
-            conn.commit()
-            print("Database schema initialized successfully.")
-
-    except Exception as e:
-        print("Database initialization error:", e)
-        # Reraise the exception to stop the application startup if the DB is unavailable/misconfigured
-        raise
-
+# REMOVED: The entire init_db() function definition is moved to init_db.py
 
 # --- ROLE_TEMPLATES and SIGNUP_TEMPLATES remain the same ---
 ROLE_TEMPLATES = {
@@ -209,7 +76,7 @@ SIGNUP_TEMPLATES = {
 def index():
     return render_template('index.html')
 
-# --- Login/Signup Routes (No change to logic) ---
+# --- Login/Signup Routes (Converted to PostgreSQL syntax) ---
 
 @app.route('/administrators', methods=['GET', 'POST'])
 def administrators_page():
@@ -231,7 +98,7 @@ def administrators_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            # Catches DB error, flashes it, and redirects (using the flash from get_db_conn)
             return redirect(url_for('administrators_page'))
     return render_template('login/administrators.html')
 
@@ -256,7 +123,6 @@ def create_admin():
             flash('Record already exists (duplicate name).', 'error')
             return redirect(url_for('create_admin'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('create_admin'))
     return render_template('sign in/create_admin.html')
 
@@ -280,7 +146,6 @@ def teachers_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('teachers_page'))
     return render_template('login/teachers.html')
 
@@ -307,7 +172,6 @@ def create_teacher():
             flash('Record already exists (duplicate name).', 'error')
             return redirect(url_for('create_teacher'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('create_teacher'))
     return render_template('sign in/create_teacher.html')
 
@@ -321,7 +185,7 @@ def students_page():
             return redirect(url_for('students_page'))
         try:
             with get_db_conn() as (conn, cursor):
-                cursor.execute(f"SELECT ID, Name, Password FROM {TABLE_NAME_STUDENT} WHERE Name=%s", (name,))
+                cursor.execute(f"SELECT ID, Name, Password FROM {TABLE_NAME_STUDENT_DATA} WHERE Name=%s", (name,))
                 row = cursor.fetchone()
             if not row or password != row[2]:
                 flash('Invalid credentials.', 'error')
@@ -331,7 +195,6 @@ def students_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('students_page'))
     return render_template('login/students.html')
 
@@ -348,7 +211,7 @@ def create_student():
         try:
             with get_db_conn() as (conn, cursor):
                 cursor.execute(
-                    f"INSERT INTO {TABLE_NAME_STUDENT} (Name, Password, Phone, Gender) VALUES (%s, %s, %s, %s)",
+                    f"INSERT INTO {TABLE_NAME_STUDENT_DATA} (Name, Password, Phone, Gender) VALUES (%s, %s, %s, %s)",
                     (name, password, phone, gender)
                 )
                 conn.commit()
@@ -358,9 +221,8 @@ def create_student():
             flash('Record already exists (duplicate name).', 'error')
             return redirect(url_for('create_student'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('create_student'))
-    return render_template('sig in/create_student.html')
+    return render_template('sign in/create_student.html')
 
 
 @app.route('/parents', methods=['GET', 'POST'])
@@ -390,7 +252,6 @@ def parents_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('parents_page'))
 
     return render_template('login/parents.html')
@@ -413,7 +274,7 @@ def create_parent():
         try:
             with get_db_conn() as (conn, cursor):
                 # Verify child exists (using the new student table)
-                cursor.execute(f"SELECT ID FROM {TABLE_NAME_STUDENT} WHERE ID=%s", (child_int,))
+                cursor.execute(f"SELECT ID FROM {TABLE_NAME_STUDENT_DATA} WHERE ID=%s", (child_int,))
                 student = cursor.fetchone()
                 if not student:
                     flash('Student (child) ID not found.', 'error')
@@ -431,12 +292,9 @@ def create_parent():
             flash('Record already exists (duplicate entry).', 'error')
             return redirect(url_for('create_parent'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
             return redirect(url_for('create_parent'))
 
     return render_template('sign in/create_parent.html')
-
-# ... (Simplified login/signup to use the more specific routes) ...
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -444,7 +302,6 @@ def login():
     role = request.args.get('role', '').lower()
     
     if request.method == 'POST':
-        # Delegate to the specific role's login page (which handles its own POST)
         if role == 'administrator':
             return administrators_page()
         elif role == 'teacher':
@@ -457,13 +314,11 @@ def login():
             flash('Invalid role specified.', 'error')
             return redirect(url_for('index'))
 
-    # GET request: Render the appropriate login form
     tmpl = ROLE_TEMPLATES.get(role, 'login.html')
     return render_template(tmpl, role=role)
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    # Simplify: Delegate to specific signup pages
     role = request.args.get('role', '').lower()
     
     if request.method == 'POST':
@@ -482,7 +337,7 @@ def signup():
     tmpl = SIGNUP_TEMPLATES.get(role, 'signup.html')
     return render_template(tmpl, role=role)
 
-# --- Dashboard and Management Routes (No change to logic) ---
+# --- Dashboard and Management Routes (Continuing conversion) ---
 
 @app.route('/dashboard')
 def dashboard():
@@ -508,7 +363,6 @@ def manage_students():
     try:
         with get_db_conn(dict_cursor=True) as (conn, cursor):
             if q:
-                # Note: Using TABLE_NAME_STUDENT_DATA
                 cursor.execute(
                     f"SELECT ID, Name, Gender, Class, Grade, Password, Phone FROM {TABLE_NAME_STUDENT_DATA} WHERE Name ILIKE %s ORDER BY ID",
                     (f"%{q}%",) # ILIKE is case-insensitive LIKE in Postgres
@@ -624,7 +478,7 @@ def manage_teachers():
             cursor.execute(f"""
                 SELECT t.*, COALESCE(STRING_AGG(s.name, ', ' ORDER BY s.name), '') AS subjects
                 FROM {TABLE_NAME_TEACHER} t
-                LEFT JOIN subjects s ON t.ID = s.teacher_id
+                LEFT JOIN {TABLE_NAME_SUBJECT} s ON t.ID = s.teacher_id
                 GROUP BY t.ID
                 ORDER BY t.Name
             """)
@@ -859,7 +713,7 @@ def manage_subject():
             cursor.execute(f"""
                 SELECT s.subject_id, s.name, t.Name AS teacher_name,
                        COUNT(ss.student_id) AS student_count
-                FROM subjects s
+                FROM {TABLE_NAME_SUBJECT} s
                 LEFT JOIN {TABLE_NAME_TEACHER} t ON s.teacher_id = t.ID
                 LEFT JOIN student_subjects ss ON s.subject_id = ss.subject_id
                 GROUP BY s.subject_id, s.name, t.Name
@@ -903,7 +757,7 @@ def add_subject():
         
     try:
         with get_db_conn() as (conn, cursor):
-            cursor.execute("INSERT INTO subjects (name, teacher_id) VALUES (%s, %s)", (name, teacher_id if teacher_id else None))
+            cursor.execute(f"INSERT INTO {TABLE_NAME_SUBJECT} (name, teacher_id) VALUES (%s, %s)", (name, teacher_id if teacher_id else None))
             conn.commit()
         flash('Subject added.', 'success')
     except psycopg2.errors.UniqueViolation:
@@ -921,12 +775,12 @@ def edit_subject(subject_id):
             if request.method == 'POST':
                 name = request.form.get('name', '').strip()
                 teacher_id = request.form.get('teacher_id') or None
-                cursor.execute("UPDATE subjects SET name=%s, teacher_id=%s WHERE subject_id=%s", (name, teacher_id if teacher_id else None, subject_id))
+                cursor.execute(f"UPDATE {TABLE_NAME_SUBJECT} SET name=%s, teacher_id=%s WHERE subject_id=%s", (name, teacher_id if teacher_id else None, subject_id))
                 conn.commit()
                 flash('Subject updated.', 'success')
                 return redirect(url_for('manage_subject'))
             
-            cursor.execute("SELECT * FROM subjects WHERE subject_id=%s", (subject_id,))
+            cursor.execute(f"SELECT * FROM {TABLE_NAME_SUBJECT} WHERE subject_id=%s", (subject_id,))
             subject = cursor.fetchone()
             cursor.execute(f"SELECT ID, Name FROM {TABLE_NAME_TEACHER} ORDER BY Name")
             teachers = cursor.fetchall()
@@ -942,7 +796,7 @@ def edit_subject(subject_id):
 def delete_subject(subject_id):
     try:
         with get_db_conn() as (conn, cursor):
-            cursor.execute("DELETE FROM subjects WHERE subject_id=%s", (subject_id,))
+            cursor.execute(f"DELETE FROM {TABLE_NAME_SUBJECT} WHERE subject_id=%s", (subject_id,))
             conn.commit()
         flash('Subject deleted.', 'info')
     except Exception as e:
@@ -959,7 +813,6 @@ def fee_control():
     try:
         with get_db_conn(dict_cursor=True) as (conn, cursor):
             if q:
-                # Try to search by ID first if q is numeric
                 search_id = None
                 try:
                     search_id = int(q)
@@ -967,7 +820,6 @@ def fee_control():
                     pass
                 
                 if search_id:
-                    # Search by ID (numeric) - Only students enrolled in subjects
                     cursor.execute(f"""
                         SELECT DISTINCT s.ID, s.Name, s.Gender, s.Class, s.Phone
                         FROM {TABLE_NAME_STUDENT_DATA} s
@@ -976,7 +828,6 @@ def fee_control():
                         LIMIT 1
                     """, (search_id,))
                 else:
-                    # Search by name - Only students enrolled in subjects
                     cursor.execute(f"""
                         SELECT DISTINCT s.ID, s.Name, s.Gender, s.Class, s.Phone
                         FROM {TABLE_NAME_STUDENT_DATA} s
@@ -990,7 +841,6 @@ def fee_control():
                 
                 if student:
                     student_id = student['id']
-                    # Get enrolled subjects and their fees for this student
                     cursor.execute(f"""
                         SELECT 
                             COALESCE(f.fee_id, NULL) AS fee_id,
@@ -1003,7 +853,7 @@ def fee_control():
                             sub.name AS subject_name,
                             t.Name AS teacher_name
                         FROM student_subjects ss
-                        LEFT JOIN subjects sub ON ss.subject_id = sub.subject_id
+                        LEFT JOIN {TABLE_NAME_SUBJECT} sub ON ss.subject_id = sub.subject_id
                         LEFT JOIN {TABLE_NAME_TEACHER} t ON sub.teacher_id = t.ID
                         LEFT JOIN fees f ON f.student_id = ss.student_id AND f.subject_id = ss.subject_id
                         WHERE ss.student_id = %s
@@ -1013,14 +863,8 @@ def fee_control():
             
             # Convert dictionary keys back to original case for template
             if student:
-                # RealDictCursor keys are lowercase, convert back to match template's expected case
                 student = {k.capitalize() if k not in ('class', 'phone') else k: v for k, v in student.items()}
-                student['ID'] = student['Id'] 
-                del student['Id'] 
-            
-            if student_fees:
-                 # No key changes needed for student_fees as they are used directly in the template
-                 pass
+                student['ID'] = student.pop('Id') 
 
     except Exception as e:
         print("fee_control error:", e)
@@ -1152,21 +996,12 @@ def enroll_student():
         
     return redirect(url_for('manage_subject'))
 
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
-
-# Only run the app locally if executed directly
 if __name__ == '__main__':
-    try:
-        init_db()
-    except Exception as e:
-        print("Failed to initialize database:", e)
-        # Note: If running locally and DB fails, we still want the error to be visible
-        # If running on Render, this block is bypassed by Gunicorn.
-
     port = int(os.environ.get('PORT', 5000))
-    # We must set debug=False when not running locally in production environment
     app.run(host='0.0.0.0', port=port, debug=True)
