@@ -1,4 +1,4 @@
-import mysql.connector
+import psycopg2
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 # Use psycopg2 for PostgreSQL
 import psycopg2
