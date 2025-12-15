@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Create Teacher — DAA Management System</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="panel1" aria-label="Create Teacher">
+    <main class="login-wrap" role="main">
+      <header class="login-header">
+        <h1 class="brand1">Create Teacher</h1>
+      </header>
+
+      <section class="login-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flashes" aria-live="polite">
+              {% for cat, msg in messages %}
+                <li class="{{ cat }}">{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('create_teacher') }}" id="createTeacher" novalidate>
+          <div class="field">
+            <label for="t_name">Name</label>
+            <input id="t_name" name="name" class="input" type="text" placeholder="Full name" required>
+          </div>
+
+          <div class="field">
+            <label for="t_phone">Phone</label>
+            <input id="t_phone" name="phone" class="input" type="tel" placeholder="e.g. +1234567890">
+          </div>
+
+          <div class="field">
+            <label for="t_gender">Gender</label>
+            <select id="t_gender" name="gender" class="input">
+              <option value="other">Other</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="t_pass">Password</label>
+            <input id="t_pass" name="password" class="input" type="password" placeholder="Password" required>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit">Create Teacher</button>
+            <a class="btn btn-ghost" href="{{ url_for('index') }}">Home</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  <div class="cta" aria-label="Actions">
+      <div style="margin-top:20px"></div>
+      <a class="btn btn-ghost" href="{{ url_for('teachers_page') }}">Back to Sign In</a>
+  </div>
+  </div>
+</body>
+</html>
