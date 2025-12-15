@@ -1,1 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control | School DAA System</title>
 
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      display: flex;
+      min-height: 100vh;
+      background: #f4f6f9;
+      color: #333;
+    }
+    .sidebar {
+      width: 250px;
+      background: #2d3e50;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .sidebar a {
+      text-decoration: none;
+      color: #fff;
+      padding: 15px 20px;
+      display: block;
+      transition: background 0.2s ease;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      background: #1e90ff;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: #2d3e50;
+      color: #fff;
+      border: none;
+      padding: 15px 20px;
+      cursor: pointer;
+      font-size: 1.5rem;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .menu-toggle.active {
+      display: flex;
+    }
+
+    /* Main Area */
+    .main-content {
+      flex: 1;
+      padding: 20px 30px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      padding: 15px 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      color: #2d3e50;
+    }
+
+    header button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #1e90ff;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    header button:hover {
+      background: #187bcd;
+    }
+
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      color: #555;
+    }
+
+    .card p {
+      font-size: 1.7rem;
+      color: #1e90ff;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+
+    section {
+      margin-top: 40px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+
+    section h2 {
+      margin-bottom: 20px;
+      color: #2d3e50;
+      font-size: 1.2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      padding: 12px 8px;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .action-btn {
+      background: #1e90ff;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin: 2px;
+    }
+
+    .action-btn.delete {
+      background: #e74c3c;
+    }
+
+    .action-btn:hover {
+      opacity: 0.8;
+    }
+    .logout-btn {
+      padding: 8px 16px;
+      border: none;
+      background: #e74c3c;
+      color: #fff;
+      text-decoration: none;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    /* Responsive Design */
+    /* Tablet: 1024px and below */
+    @media(max-width: 1024px) {
+      .sidebar {
+        width: 200px;
+      }
+      .main-content {
+        padding: 15px 20px;
+      }
+      .dashboard-cards {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+      }
+      .card {
+        padding: 15px;
+      }
+      .card h3 {
+        font-size: 1rem;
+      }
+      .card p {
+        font-size: 1.5rem;
+      }
+      section {
+        padding: 15px;
+        margin-top: 20px;
+      }
+      header {
+        padding: 12px 15px;
+      }
+      header h1 {
+        font-size: 1.2rem;
+      }
+    }
+
+    /* Tablet: 768px and below */
+    @media(max-width: 768px) {
+      body {
+        flex-direction: column;
+      }
+      .menu-toggle {
+        display: flex;
+      }
+      .sidebar {
+        width: 100%;
+        padding: 10px;
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        border-bottom: 1px solid #1e90ff;
+      }
+      .sidebar.open {
+        display: flex;
+      }
+      .sidebar h2 {
+        display: none;
+      }
+      .sidebar a {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        text-align: left;
+      }
+      .main-content {
+        padding: 12px;
+      }
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px;
+      }
+      header h1 {
+        font-size: 1.1rem;
+        width: 100%;
+      }
+      .dashboard-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+      .card {
+        padding: 12px;
+      }
+      .card h3 {
+        font-size: 0.9rem;
+      }
+      .card p {
+        font-size: 1.3rem;
+      }
+      section {
+        padding: 12px;
+        margin-top: 15px;
+      }
+      section h2 {
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+      }
+      table {
+        font-size: 0.9rem;
+      }
+      th, td {
+        padding: 10px 6px;
+      }
+      .action-btn {
+        padding: 5px 8px;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Mobile: 480px and below */
+    @media(max-width: 480px) {
+      .menu-toggle {
+        padding: 12px 15px;
+        font-size: 1.3rem;
+      }
+      .sidebar {
+        top: 50px;
+      }
+      .sidebar a {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+      }
+      .main-content {
+        padding: 8px;
+      }
+      header {
+        padding: 8px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      header h1 {
+        font-size: 1rem;
+      }
+      .logout-btn {
+        width: 100%;
+        padding: 10px;
+      }
+      .dashboard-cards {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .card {
+        padding: 10px;
+      }
+      .card h3 {
+        font-size: 0.85rem;
+      }
+      .card p {
+        font-size: 1.2rem;
+      }
+      section {
+        padding: 10px;
+        margin-top: 12px;
+      }
+      section h2 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+      }
+      table {
+        font-size: 0.8rem;
+        min-width: 100%;
+      }
+      th, td {
+        padding: 8px 4px;
+      }
+      .action-btn {
+        padding: 4px 6px;
+        font-size: 0.75rem;
+      }
+    }
+
+    /* Extra small: 320px and below */
+    @media(max-width: 320px) {
+      .menu-toggle {
+        font-size: 1.2rem;
+        padding: 10px;
+      }
+      .sidebar a {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+      }
+      .card p {
+        font-size: 1.1rem;
+      }
+      table {
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+    <span>Menu</span>
+  </button>
+
+  <div class="sidebar" id="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="{{ url_for('dashboard') }}" class="active">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{{ url_for('manage_students') }}">
+      <i class="fas fa-users"></i> Manage Students
+    </a>
+    <a href="{{ url_for('manage_teachers') }}">
+      <i class="fas fa-chalkboard-user"></i> Manage Teachers
+    </a>
+    <a href="{{ url_for('manage_subject') }}">
+      <i class="fas fa-book"></i> Manage Subjects
+    </a>
+    <a href="{{ url_for('fee_control') }}">
+      <i class="fas fa-credit-card"></i> Fees Control
+    </a>
+    <a href="{{ url_for('logout') }}">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+  </div>
+  <div class="main-content">
+    <header>
+      <h1>Welcome, Admin {{ name }}</h1>
+      <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </header>
+
+    <div class="dashboard-cards">
+      <div class="card">
+        <h3>Total Students</h3>
+        <p>450</p>
+      </div>
+      <div class="card">
+        <h3>Total Teachers</h3>
+        <p>32</p>
+      </div>
+      <div class="card">
+        <h3>Subjects</h3>
+        <p>15</p>
+      </div>
+      <div class="card">
+        <h3>Pending Fees</h3>
+        <p>$2,350</p>
+      </div>
+    </div>
+
+    <!-- Student Management Section -->
+    <section>
+      <h2>Student Management</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Full Name</th>
+            <th>Class</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ST001</td>
+            <td>Sokha Chann</td>
+            <td>Grade 10A</td>
+            <td><span style="color:#27ae60">Active</span></td>
+            <td>
+              <button class="action-btn">Edit</button>
+              <button class="action-btn delete">Delete</button>
+            </td>
+          </tr>
+          <tr>
+            <td>ST002</td>
+            <td>Dara Meas</td>
+            <td>Grade 9B</td>
+            <td><span style="color:#f39c12">Locked</span></td>
+            <td>
+              <button class="action-btn">Unlock</button>
+              <button class="action-btn delete">Delete</button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="5" class="no-data">No more students. <a href="#" style="color:#1e90ff">Add new student</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      menuToggle.innerHTML = sidebar.classList.contains('open') 
+        ? '<i class="fas fa-times"></i><span>Close</span>' 
+        : '<i class="fas fa-bars"></i><span>Menu</span>';
+    });
+
+    // Close menu when a link is clicked
+    sidebar.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        menuToggle.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+      });
+    });
+  </script>
+</body>
+</html>
