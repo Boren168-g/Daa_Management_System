@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fee Management — DAA Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+    body{display:flex;min-height:100vh;background:#f4f6f9;color:#333}
+    .sidebar{width:250px;background:#2d3e50;color:#fff;display:flex;flex-direction:column;padding:20px 0}
+    .sidebar h2{text-align:center;margin-bottom:30px}
+    .sidebar a{display:block;padding:15px 20px;color:#fff;text-decoration:none;transition:background .2s}
+    .sidebar a:hover,.sidebar a.active{background:#1e90ff}
+    .menu-toggle{display:none;background:#2d3e50;color:#fff;border:none;padding:15px 20px;cursor:pointer;font-size:1.5rem;align-items:center;gap:10px}
+    .menu-toggle.active{display:flex}
+    .main{flex:1;padding:20px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+    header h1{font-size:1.2rem;color:#2d3e50}
+    .top-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;text-decoration:none;color:#fff;background:#1e90ff;border:none;cursor:pointer}
+    .btn:hover{opacity:0.9}
+    .btn.danger{background:#e74c3c}
+    .btn.success{background:#27ae60}
+    .btn.ghost{background:#fff;color:#1e90ff;border:1px solid #1e90ff}
+    .card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 3px 8px rgba(0,0,0,0.08);margin-bottom:20px}
+    .card h2{margin-bottom:15px;font-size:1.1rem}
+    .search-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .search-form input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;flex:1;min-width:200px}
+    .student-info{background:#f9f9f9;padding:15px;border-radius:8px;margin-bottom:20px;border-left:4px solid #1e90ff}
+    .student-info h3{color:#2d3e50;margin-bottom:8px;font-size:1rem}
+    .student-info p{font-size:0.9rem;color:#666;margin:4px 0}
+    .table-wrap{background:#fff;border-radius:12px;padding:18px;box-shadow:0 3px 8px rgba(0,0,0,0.08)}
+    .responsive-table{width:100%;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:600px}
+    th,td{padding:12px 10px;text-align:left;border-bottom:1px solid #eee;font-size:0.9rem}
+    th{background:#fafafa;color:#555;font-weight:600}
+    .status-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:0.8rem;font-weight:600}
+    .status-pending{background:#fff3cd;color:#856404}
+    .status-partial{background:#cfe2ff;color:#084298}
+    .status-paid{background:#d1e7dd;color:#0f5132}
+    .amount{color:#1e90ff;font-weight:600}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .action-btn{padding:6px 10px;border-radius:6px;border:none;cursor:pointer;color:#fff;background:#1e90ff;text-decoration:none;font-size:0.8rem}
+    .action-btn.danger{background:#e74c3c}
+    .action-btn:hover{opacity:0.9}
+    .summary-box{margin-top:20px;padding:15px;background:#e8f4f8;border-radius:8px}
+    .summary-box h3{margin-bottom:10px;font-size:1rem}
+    .summary-box p{font-size:0.9rem;margin:6px 0}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;padding:15px}
+    .modal.active{display:flex}
+    .modal-content{background:#fff;padding:25px;border-radius:12px;max-width:400px;width:100%;box-shadow:0 5px 20px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
+    .modal-content h2{margin-bottom:15px;color:#2d3e50;font-size:1.1rem}
+    .modal-content label{display:block;margin-top:12px;font-weight:600;font-size:0.9rem}
+    .modal-content input{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;margin-top:6px;font-size:0.9rem}
+    .modal-actions{display:flex;gap:8px;margin-top:20px}
+    .modal-actions button{flex:1;padding:10px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-size:0.9rem}
+    .close-btn{cursor:pointer;color:#666;font-size:1.5rem;line-height:1}
+    .no-data{padding:20px;text-align:center;color:#6b7280}
+
+    /* Tablet: 1024px and below */
+    @media(max-width:1024px){
+      .sidebar{width:200px}
+      .main{padding:15px 20px}
+      header h1{font-size:1.1rem}
+      .top-actions{gap:6px}
+      .btn{padding:6px 10px;font-size:0.9rem}
+    }
+
+    /* Tablet: 768px and below */
+    @media(max-width:768px){
+      body{flex-direction:column}
+      .menu-toggle{display:flex}
+      .sidebar{width:100%;padding:10px;display:none;flex-direction:column;position:absolute;top:60px;left:0;right:0;z-index:1000;border-bottom:1px solid #1e90ff}
+      .sidebar.open{display:flex}
+      .sidebar h2{display:none}
+      .sidebar a{padding:12px 20px;font-size:0.95rem;text-align:left}
+      .main{padding:12px;margin-top:0}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+      header h1{width:100%;font-size:1rem}
+      .top-actions{width:100%;flex-direction:column;margin-left:0}
+      .btn{width:100%;text-align:center;font-size:0.9rem}
+      .search-form{width:100%;flex-direction:column}
+      .search-form input{width:100%;min-width:unset}
+      .table-wrap{padding:12px}
+      table{font-size:0.9rem;min-width:100%}
+      th,td{padding:10px 6px}
+      .action-btn{padding:5px 8px;font-size:0.8rem}
+      .card{padding:12px}
+      .student-info{padding:12px}
+      .student-info h3{font-size:0.95rem}
+      .student-info p{font-size:0.85rem}
+      .modal-content{padding:20px;max-width:95vw}
+      .summary-box{padding:12px}
+      .summary-box h3{font-size:0.95rem}
+      .summary-box p{font-size:0.85rem;margin:4px 0}
+    }
+
+    /* Mobile: 480px and below */
+    @media(max-width:480px){
+      .menu-toggle{padding:12px 15px;font-size:1.3rem}
+      .sidebar{top:50px}
+      .sidebar a{padding:10px 15px;font-size:0.9rem}
+      .main{padding:8px}
+      header{padding:0;margin-bottom:12px}
+      header h1{font-size:0.95rem}
+      .top-actions{gap:6px}
+      .btn{padding:8px;font-size:0.85rem}
+      .table-wrap{padding:10px}
+      table{font-size:0.8rem}
+      th,td{padding:8px 4px}
+      .action-btn{padding:4px 6px;font-size:0.75rem}
+      .status-badge{font-size:0.7rem;padding:3px 6px}
+      .modal-content{padding:15px}
+      .modal-content h2{font-size:1rem}
+      .modal-content label{font-size:0.85rem;margin-top:10px}
+      .modal-content input{padding:6px;font-size:0.85rem}
+      .modal-actions{gap:6px;margin-top:15px}
+      .modal-actions button{font-size:0.85rem;padding:8px}
+      .summary-box{padding:10px}
+      .summary-box h3{font-size:0.9rem}
+      .summary-box p{font-size:0.8rem}
+    }
+
+    /* Extra small: 320px and below */
+    @media(max-width:320px){
+      .menu-toggle{font-size:1.2rem;padding:10px}
+      .sidebar a{padding:8px 12px;font-size:0.85rem}
+      table{font-size:0.75rem}
+      th,td{padding:6px 2px}
+    }
+  </style>
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+    <span>Menu</span>
+  </button>
+  
+  <div class="sidebar" id="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="{{ url_for('dashboard') }}">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{{ url_for('manage_students') }}">
+      <i class="fas fa-users"></i> Manage Students
+    </a>
+    <a href="{{ url_for('manage_teachers') }}">
+      <i class="fas fa-chalkboard-user"></i> Manage Teachers
+    </a>
+    <a href="{{ url_for('manage_subject') }}">
+      <i class="fas fa-book"></i> Manage Subjects
+    </a>
+    <a href="{{ url_for('fee_control') }}" class="active">
+      <i class="fas fa-credit-card"></i> Fees Control
+    </a>
+    <a href="{{ url_for('logout') }}">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+  </div>
+
+  <main class="main">
+    <header>
+      <h1>Fee Management</h1>
+      <div class="top-actions">
+        <form class="search-form" action="{{ url_for('fee_control') }}" method="get" style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+          <input type="text" name="q" placeholder="Search student name or ID..." value="{{ search_query or '' }}" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;min-width:220px" required>
+          <button type="submit" class="btn"><i class="fas fa-search"></i> Search</button>
+          <a href="{{ url_for('fee_control') }}" class="btn ghost"><i class="fas fa-times"></i> Clear</a>
+        </form>
+      </div>
+    </header>
+
+    {% if student and student_fees %}
+    <div class="card">
+      <div class="student-info">
+        <h3>{{ student.Name }}</h3>
+        <p><strong>Student ID:</strong> {{ student.ID }}</p>
+        <p><strong>Gender:</strong> {{ student.Gender or '—' }}</p>
+        <p><strong>Class:</strong> {{ student.Class or '—' }}</p>
+        <p><strong>Phone:</strong> {{ student.Phone or '—' }}</p>
+      </div>
+
+      <h2>Subject Fees (Enrolled Subjects)</h2>
+      <div class="table-wrap">
+        <div class="responsive-table">
+          <table role="table" aria-label="Subject fees table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Teacher</th>
+                <th>Amount</th>
+                <th>Paid</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th>Due Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fee in student_fees %}
+              <tr>
+                <td>{{ fee.subject_name }}</td>
+                <td>{{ fee.teacher_name or '—' }}</td>
+                <td class="amount">${{ "%.2f"|format(fee.amount) }}</td>
+                <td class="amount">${{ "%.2f"|format(fee.paid) }}</td>
+                <td class="amount">${{ "%.2f"|format(fee.amount - fee.paid) }}</td>
+                <td>
+                  <span class="status-badge status-{{ fee.status }}">{{ fee.status|upper }}</span>
+                </td>
+                <td>{{ fee.due_date or '—' }}</td>
+                <td>
+                  <div class="actions">
+                    {% if fee.fee_id %}
+                      <button class="action-btn" onclick="openPaymentModal({{ fee.fee_id }}, '{{ fee.subject_name }}', {{ fee.amount - fee.paid }})">
+                        <i class="fas fa-money-bill"></i> Pay
+                      </button>
+                      <form method="post" action="{{ url_for('delete_fee', fee_id=fee.fee_id) }}" style="display:inline" onsubmit="return confirm('Delete this fee?');">
+                        <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
+                      </form>
+                    {% else %}
+                      <button class="action-btn success" onclick="openFeeModal({{ student.ID }}, {{ fee.subject_id }}, '{{ fee.subject_name }}', 65)">
+                        <i class="fas fa-plus"></i> Generate Fee
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="summary-box">
+        <h3>Total Summary</h3>
+        {% set total_amount = student_fees|map(attribute='amount')|sum %}
+        {% set total_paid = student_fees|map(attribute='paid')|sum %}
+        {% set total_remaining = total_amount - total_paid %}
+        <p><strong>Total Amount:</strong> <span class="amount">${{ "%.2f"|format(total_amount) }}</span></p>
+        <p><strong>Total Paid:</strong> <span class="amount" style="color:#27ae60">${{ "%.2f"|format(total_paid) }}</span></p>
+        <p><strong>Total Remaining:</strong> <span class="amount" style="color:#e74c3c">${{ "%.2f"|format(total_remaining) }}</span></p>
+      </div>
+    </div>
+    {% elif search_query %}
+    <div class="table-wrap">
+      <div class="no-data">
+        <i class="fas fa-search" style="font-size:2rem;color:#ccc;margin-bottom:10px"></i>
+        <p>No student found with name or ID: <strong>{{ search_query }}</strong></p>
+      </div>
+    </div>
+    {% else %}
+    <div class="table-wrap">
+      <div class="no-data">
+        <i class="fas fa-search" style="font-size:2rem;color:#ccc;margin-bottom:10px"></i>
+        <p>Search for a student to view and manage fees</p>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+
+  <!-- Add/Edit Fee Modal -->
+  <div id="feeModal" class="modal">
+    <div class="modal-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+        <h2>Add Fee</h2>
+        <span class="close-btn" onclick="closeFeeModal()">&times;</span>
+      </div>
+      <form method="post" action="{{ url_for('add_fee') }}">
+        <input type="hidden" id="studentIdInput" name="student_id">
+        <input type="hidden" id="subjectIdInput" name="subject_id">
+        
+        <label>Subject Name</label>
+        <input type="text" id="subjectName" readonly style="background:#f0f0f0;cursor:not-allowed">
+        
+        <label>Amount ($)</label>
+        <input type="number" id="feeAmount" name="amount" step="0.01" min="0" required placeholder="0.00">
+        
+        <label>Due Date</label>
+        <input type="date" name="due_date">
+        
+        <div class="modal-actions">
+          <button type="submit" class="btn success"><i class="fas fa-save"></i> Save Fee</button>
+          <button type="button" class="btn" style="background:#6c757d" onclick="closeFeeModal()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Payment Modal -->
+  <div id="paymentModal" class="modal">
+    <div class="modal-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+        <h2>Record Payment</h2>
+        <span class="close-btn" onclick="closePaymentModal()">&times;</span>
+      </div>
+      <form method="post" id="paymentForm">
+        <label>Subject</label>
+        <input type="text" id="paymentSubject" readonly style="background:#f0f0f0;cursor:not-allowed">
+        
+        <label>Remaining Amount</label>
+        <input type="text" id="remainingAmount" readonly style="background:#f0f0f0;cursor:not-allowed">
+        
+        <label>Amount to Pay ($)</label>
+        <input type="number" name="amount_paid" id="amountPaid" step="0.01" min="0" required placeholder="0.00">
+        
+        <div class="modal-actions">
+          <button type="submit" class="btn success"><i class="fas fa-check"></i> Confirm Payment</button>
+          <button type="button" class="btn" style="background:#6c757d" onclick="closePaymentModal()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      menuToggle.innerHTML = sidebar.classList.contains('open') 
+        ? '<i class="fas fa-times"></i><span>Close</span>' 
+        : '<i class="fas fa-bars"></i><span>Menu</span>';
+    });
+
+    sidebar.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        menuToggle.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+      });
+    });
+
+    function openFeeModal(studentId, subjectId, subjectName, amount=null) {
+      document.getElementById('studentIdInput').value = studentId;
+      document.getElementById('subjectIdInput').value = subjectId;
+      document.getElementById('subjectName').value = subjectName;
+      if (amount !== null) {
+        document.getElementById('feeAmount').value = parseFloat(amount).toFixed(2);
+      } else {
+        document.getElementById('feeAmount').value = '';
+      }
+      document.getElementById('feeModal').classList.add('active');
+    }
+
+    function closeFeeModal() {
+      document.getElementById('feeModal').classList.remove('active');
+      // clear inputs to avoid stale values
+      document.getElementById('studentIdInput').value = '';
+      document.getElementById('subjectIdInput').value = '';
+      document.getElementById('subjectName').value = '';
+      document.getElementById('feeAmount').value = '';
+    }
+
+    function openPaymentModal(feeId, subjectName, remaining) {
+      const id = parseInt(feeId, 10);
+      if (Number.isNaN(id)) {
+        // safety: if no numeric fee id, do nothing (use Generate Fee to create fee first)
+        return;
+      }
+      document.getElementById('paymentSubject').value = subjectName;
+      document.getElementById('remainingAmount').value = '$' + remaining.toFixed(2);
+      document.getElementById('amountPaid').max = remaining;
+      document.getElementById('paymentForm').action = '/pay_fee/' + id;
+      document.getElementById('paymentModal').classList.add('active');
+    }
+
+    function closePaymentModal() {
+      document.getElementById('paymentModal').classList.remove('active');
+    }
+
+    window.addEventListener('click', (e) => {
+      const feeModal = document.getElementById('feeModal');
+      const paymentModal = document.getElementById('paymentModal');
+      if (e.target === feeModal) feeModal.classList.remove('active');
+      if (e.target === paymentModal) paymentModal.classList.remove('active');
+    });
+  </script>
+</body>
+</html>

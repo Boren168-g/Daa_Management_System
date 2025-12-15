@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Manage Teachers — DAA Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+    body{display:flex;min-height:100vh;background:#f4f6f9;color:#333}
+    .sidebar{width:250px;background:#2d3e50;color:#fff;display:flex;flex-direction:column;padding:20px 0}
+    .sidebar h2{text-align:center;margin-bottom:30px}
+    .sidebar a{display:block;padding:15px 20px;color:#fff;text-decoration:none;transition:background .2s}
+    .sidebar a:hover,.sidebar a.active{background:#1e90ff}
+    .menu-toggle{display:none;background:#2d3e50;color:#fff;border:none;padding:15px 20px;cursor:pointer;font-size:1.5rem;align-items:center;gap:10px}
+    .menu-toggle.active{display:flex}
+    .main{flex:1;padding:20px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+    header h1{font-size:1.2rem;color:#2d3e50}
+    .top-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+    .btn{display:inline-block;padding:8px 12px;border-radius:8px;text-decoration:none;color:#fff;background:#1e90ff}
+    .btn.ghost{background:#fff;color:#1e90ff;border:1px solid #1e90ff}
+    .table-wrap{background:#fff;border-radius:12px;padding:18px;box-shadow:0 3px 8px rgba(0,0,0,0.08)}
+    .responsive-table{width:100%;overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    th,td{padding:12px 10px;text-align:left;border-bottom:1px solid #eee}
+    th{background:#fafafa;color:#555}
+    .actions{display:flex;gap:8px}
+    .action-btn{padding:6px 10px;border-radius:6px;border:none;cursor:pointer;color:#fff;background:#1e90ff;text-decoration:none}
+    .action-btn.danger{background:#e74c3c}
+    .card-list{display:grid;gap:12px;margin-top:12px;display:none}
+    .teacher-card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.04);display:flex;justify-content:space-between;align-items:center}
+    .meta{display:flex;gap:12px;align-items:center}
+    .avatar{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#7b61ff,#4facfe);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+    .no-data{padding:20px;text-align:center;color:#6b7280}
+
+    @media(max-width:1024px){
+      .sidebar{width:200px}
+      .main{padding:15px 20px}
+      header h1{font-size:1.1rem}
+      .top-actions{gap:6px}
+      .btn{padding:6px 10px;font-size:0.9rem}
+    }
+    @media(max-width:768px){
+      body{flex-direction:column}
+      .menu-toggle{display:flex}
+      .sidebar{width:100%;padding:10px;display:none;flex-direction:column;position:absolute;top:60px;left:0;right:0;z-index:1000;border-bottom:1px solid #1e90ff}
+      .sidebar.open{display:flex}
+      .sidebar h2{display:none}
+      .sidebar a{padding:12px 20px;font-size:0.95rem;text-align:left}
+      .main{padding:12px;margin-top:0}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+      header h1{width:100%;font-size:1rem}
+      .top-actions{width:100%;flex-direction:column;margin-left:0}
+      .btn{width:100%;text-align:center;font-size:0.9rem}
+      #searchForm{width:100%;flex-direction:column}
+      #searchForm input{width:100%;min-width:unset}
+      .responsive-table{display:none}
+      .card-list{display:grid}
+      .table-wrap{padding:12px}
+      table{font-size:0.9rem;min-width:100%}
+      th,td{padding:10px 6px}
+      .action-btn{padding:5px 8px;font-size:0.8rem}
+      .teacher-card{flex-direction:column;align-items:flex-start;gap:8px}
+    }
+    @media(max-width:480px){
+      .menu-toggle{padding:12px 15px;font-size:1.3rem}
+      .sidebar{top:50px}
+      .sidebar a{padding:10px 15px;font-size:0.9rem}
+      .main{padding:8px}
+      header{padding:0;margin-bottom:12px}
+      header h1{font-size:0.95rem}
+      .top-actions{gap:6px}
+      .btn{padding:8px;font-size:0.85rem}
+      .table-wrap{padding:10px}
+      table{font-size:0.8rem}
+      th,td{padding:8px 4px}
+      .action-btn{padding:4px 6px;font-size:0.75rem}
+      .card-list{gap:10px}
+      .teacher-card{padding:10px}
+      .avatar{width:40px;height:40px;font-size:0.9rem}
+    }
+    @media(max-width:320px){
+      .menu-toggle{font-size:1.2rem;padding:10px}
+      .sidebar a{padding:8px 12px;font-size:0.85rem}
+      table{font-size:0.75rem}
+      th,td{padding:6px 2px}
+    }
+  </style>
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+    <span>Menu</span>
+  </button>
+  <div class="sidebar" id="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="{{ url_for('dashboard') }}">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{{ url_for('manage_students') }}">
+      <i class="fas fa-users"></i> Manage Students
+    </a>
+    <a href="{{ url_for('manage_teachers') }}" class="active">
+      <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
+    </a>
+    <a href="{{ url_for('manage_subject') }}">
+      <i class="fas fa-book"></i> Manage Subjects
+    </a>
+    <a href="{{ url_for('fee_control') }}">
+      <i class="fas fa-credit-card"></i> Fees Control
+    </a>
+    <a href="{{ url_for('logout') }}">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+  </div>
+  <main class="main">
+    <header>
+      <h1>Teachers Management</h1>
+      <div class="top-actions">
+        <a class="btn" href="{{ url_for('add_teacher') }}"><i class="fas fa-plus"></i> Add Teacher</a>
+        <a class="btn" href="{{ url_for('manage_schedule') }}"><i class="fas fa-calendar-alt"></i> Schedules</a>
+        <form id="searchForm" action="{{ url_for('manage_teachers') }}" method="get" style="display:flex;gap:8px;align-items:center;">
+          <input id="searchInput" name="q" type="search" placeholder="Search teacher name..." value="{{ request.args.get('q','') }}" aria-label="Search teachers by name" style="padding:8px 10px;border-radius:8px;border:1px solid #ddd;min-width:220px" />
+          <button type="submit" class="btn"><i class="fas fa-search"></i> Search</button>
+          <button type="button" id="clearSearch" class="btn ghost" title="Clear search"><i class="fas fa-times"></i> Clear</button>
+        </form>
+      </div>
+    </header>
+    <div class="table-wrap">
+      {% if teachers and teachers|length > 0 %}
+      <div class="responsive-table">
+        <table role="table" aria-label="Teachers table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Full Name</th>
+              <th>Gender</th>
+              <th>Phone</th>
+              <th>Password</th>
+              <th>Subjects</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="teachersTableBody">
+            {% for t in teachers %}
+            <tr>
+              <td>{{ t.ID }}</td>
+              <td class="teacher-name">{{ t.Name }}</td>
+              <td>{{ t.Gender or '—' }}</td>
+              <td>{{ t.Phone or '—' }}</td>
+              <td>{{ t.Password or '—' }}</td>
+              <td>{{ t.subjects or '—' }}</td>
+              <td>
+                <div class="actions">
+                  <a class="action-btn" href="{{ url_for('edit_teacher', id=t.ID) }}"><i class="fas fa-edit"></i> Edit</a>
+                  <form method="post" action="{{ url_for('delete_teacher', id=t.ID) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
+                    <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="no-data">No teachers found. <a href="{{ url_for('add_teacher') }}">Create the first teacher</a></div>
+      {% endif %}
+
+      <div id="cardList" class="card-list">
+        {% for t in teachers %}
+        <div class="teacher-card">
+          <div class="meta">
+            <div class="avatar">{{ (t.Name or 'T')[:2]|upper }}</div>
+            <div>
+              <div style="font-weight:600" class="teacher-name">{{ t.Name }}</div>
+              <div style="font-size:0.9rem;color:#6b7280">ID: {{ t.ID }} • Gender: {{ t.Gender or '—' }}</div>
+              <div style="font-size:0.9rem;color:#6b7280">Phone: {{ t.Phone or '—' }}</div>
+              <div style="font-size:0.9rem;color:#6b7280">Subjects: {{ t.subjects or '—' }}</div>
+            </div>
+          </div>
+          <div class="actions">
+            <a class="action-btn" href="{{ url_for('edit_teacher', id=t.ID) }}"><i class="fas fa-edit"></i> Edit</a>
+            <form method="post" action="{{ url_for('delete_teacher', id=t.ID) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
+              <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </main>
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      menuToggle.innerHTML = sidebar.classList.contains('open') 
+        ? '<i class="fas fa-times"></i><span>Close</span>' 
+        : '<i class="fas fa-bars"></i><span>Menu</span>';
+    });
+    sidebar.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        menuToggle.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+      });
+    });
+    (function(){
+      const input = document.getElementById('searchInput');
+      const tbody = document.getElementById('teachersTableBody');
+      const cards = document.getElementById('cardList');
+      const clearBtn = document.getElementById('clearSearch');
+      function normalize(s){ return (s||'').toLowerCase().trim(); }
+      function filterClient(q){
+        const ql = normalize(q);
+        if(tbody){
+          Array.from(tbody.rows).forEach(row=>{
+            const nameCell = row.querySelector('.teacher-name');
+            const name = nameCell ? normalize(nameCell.textContent) : '';
+            row.style.display = ql === '' || name.indexOf(ql) !== -1 ? '' : 'none';
+          });
+        }
+        if(cards){
+          Array.from(cards.children).forEach(card=>{
+            const nameEl = card.querySelector('.teacher-name');
+            const name = nameEl ? normalize(nameEl.textContent) : '';
+            card.style.display = ql === '' || name.indexOf(ql) !== -1 ? '' : 'none';
+          });
+        }
+      }
+      input && input.addEventListener('input', (e)=> filterClient(e.target.value));
+      clearBtn && clearBtn.addEventListener('click', ()=>{
+        input.value = '';
+        filterClient('');
+        window.location.href = "{{ url_for('manage_teachers') }}";
+      });
+      document.addEventListener('DOMContentLoaded', ()=> filterClient(input ? input.value : ''));
+    })();
+  </script>
+</body>
+</html>

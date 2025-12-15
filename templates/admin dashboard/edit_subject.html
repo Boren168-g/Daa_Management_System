@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Edit Subject — DAA Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Poppins',sans-serif;background:#f4f6f9;padding:20px;}
+    .card{max-width:500px;margin:24px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+    label{display:block;margin-top:12px;}
+    input,select{width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;}
+    .actions{margin-top:16px;}
+    .btn{padding:8px 14px;border-radius:6px;border:none;color:#fff;background:#1e90ff;text-decoration:none;cursor:pointer;}
+    .btn.ghost{background:#fff;color:#1e90ff;border:1px solid #1e90ff;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Edit Subject</h2>
+    <form method="post">
+      <label>Subject Name</label>
+      <input type="text" name="name" value="{{ subject.name }}" required>
+      <label>Assign Teacher</label>
+      <select name="teacher_id">
+        <option value="">-- None --</option>
+        {% for t in teachers %}
+          <option value="{{ t.ID }}" {% if t.ID == subject.teacher_id %}selected{% endif %}>{{ t.Name }}</option>
+        {% endfor %}
+      </select>
+      <div class="actions">
+        <button type="submit" class="btn">Save</button>
+        <a href="{{ url_for('manage_subject') }}" class="btn ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</body>
+</html>

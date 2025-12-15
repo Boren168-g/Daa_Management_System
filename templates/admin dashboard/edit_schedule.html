@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Edit Schedule — DAA Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body{font-family:'Poppins',sans-serif;background:#f4f6f9;padding:20px}
+    .card{max-width:720px;margin:24px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    label{display:block;font-weight:600;margin-top:12px}
+    input, select{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;margin-top:6px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+    .actions{display:flex;gap:8px;margin-top:16px}
+    .btn{padding:10px 14px;border-radius:8px;border:none;color:#fff;background:#1e90ff;text-decoration:none;cursor:pointer}
+    .btn.ghost{background:#fff;color:#1e90ff;border:1px solid #1e90ff}
+    @media(max-width:680px){.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Edit Schedule</h2>
+
+    <form method="post" action="{{ url_for('edit_schedule', id=schedule.ID) }}">
+      <label for="teacher_id">Teacher *</label>
+      <select id="teacher_id" name="teacher_id" required onchange="updateTeacherName()">
+        <option value="">-- Select a teacher --</option>
+        {% for t in teachers %}
+          <option value="{{ t.ID }}" {% if t.ID == schedule.ID %}selected{% endif %}>{{ t.Name }}</option>
+        {% endfor %}
+      </select>
+
+      <input type="hidden" id="teacher_name" name="teacher_name" value="{{ schedule.Name }}">
+
+      <label for="subject">Subject *</label>
+      <input id="subject" name="subject" type="text" required maxlength="255" placeholder="e.g. Mathematics" value="{{ schedule.Subject or '' }}" />
+
+      <label for="terms">Terms</label>
+      <input id="terms" name="terms" type="text" maxlength="100" placeholder="e.g. Fall 2025 (optional)" value="{{ schedule.Terms or '' }}" />
+
+      <div class="row">
+        <div>
+          <label for="day">Day *</label>
+          <select id="day" name="day" required>
+            {% for d in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+              <option value="{{ d }}" {% if d == schedule.Day %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="time_start">Time Start *</label>
+          <input id="time_start" name="time_start" type="time" required value="{{ schedule.Time_start }}" />
+        </div>
+      </div>
+
+      <label for="time_end">Time End *</label>
+      <input id="time_end" name="time_end" type="time" required value="{{ schedule.Time_end }}" />
+
+      <div class="actions">
+        <button type="submit" class="btn"><i class="fas fa-save"></i> Save</button>
+        <a href="{{ url_for('manage_schedule') }}" class="btn ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function updateTeacherName(){
+      const sel = document.getElementById('teacher_id');
+      const hidden = document.getElementById('teacher_name');
+      const opt = sel.options[sel.selectedIndex];
+      hidden.value = opt ? opt.text : '';
+    }
+    document.addEventListener('DOMContentLoaded', ()=> updateTeacherName());
+  </script>
+</body>
+</html>

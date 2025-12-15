@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Teacher Schedule — DAA Management System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+    body { display:flex; min-height:100vh; background:#f4f6f9; color:#333; }
+    .sidebar{width:250px;background:#2d3e50;color:#fff;display:flex;flex-direction:column;padding:20px 0}
+    .sidebar h2{text-align:center;margin-bottom:30px}
+    .sidebar a{display:block;padding:15px 20px;color:#fff;text-decoration:none;transition:background .2s}
+    .sidebar a:hover,.sidebar a.active{background:#1e90ff}
+    .menu-toggle{display:none;background:#2d3e50;color:#fff;border:none;padding:15px 20px;cursor:pointer;font-size:1.5rem;align-items:center;gap:10px}
+    .menu-toggle.active{display:flex}
+    .main{flex:1;padding:20px}
+    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .header h1 { font-size:1.3rem; color:#2d3e50; }
+    .btn { display:inline-block; padding:10px 16px; border-radius:8px; text-decoration:none; color:#fff; background:#1e90ff; border:none; cursor:pointer; }
+    .btn:hover { opacity:0.9; }
+    .btn.danger { background:#e74c3c; }
+    .view-toggle { margin-left:auto; }
+    .view-toggle button { padding:8px 12px; border:1px solid #ddd; background:#fff; cursor:pointer; border-radius:4px; margin-left:4px; }
+    .view-toggle button.active { background:#1e90ff; color:#fff; border-color:#1e90ff; }
+    .timetable-container { background:#fff; padding:20px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); overflow-x:auto; }
+    .timetable { width:100%; border-collapse:collapse; min-width:900px; }
+    .timetable th { background:linear-gradient(135deg, #2d3e50, #1e90ff); color:#fff; padding:12px; text-align:left; font-weight:600; }
+    .timetable td { padding:12px; border-bottom:1px solid #eee; }
+    .timetable tr:hover { background:#f9f9f9; }
+    .time-slot { background:#e8f4ff; font-weight:600; color:#1e90ff; width:120px; }
+    .schedule-cell { position:relative; }
+    .schedule-item { background:linear-gradient(135deg, #7b61ff, #4facfe); color:#fff; padding:10px; border-radius:6px; margin-bottom:6px; font-size:0.9rem; }
+    .schedule-item-header { font-weight:600; margin-bottom:4px; }
+    .schedule-item-meta { font-size:0.85rem; opacity:0.9; }
+    .actions { display:flex; gap:6px; margin-top:8px; }
+    .actions a, .actions button { padding:5px 8px; border:none; border-radius:4px; cursor:pointer; text-decoration:none; font-size:0.8rem; }
+    .actions a { background:#1e90ff; color:#fff; }
+    .actions button { background:#e74c3c; color:#fff; }
+    .actions a:hover, .actions button:hover { opacity:0.8; }
+    .no-data { text-align:center; padding:30px; color:#999; }
+    .list-view { display:none; }
+    .list-view.active { display:block; }
+    .list-table { width:100%; border-collapse:collapse; }
+    .list-table th, .list-table td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
+    .list-table th { background:#fafafa; font-weight:600; }
+    @media(max-width:1024px){
+      .sidebar{width:200px}
+      .main{padding:15px 20px}
+      .header h1{font-size:1.1rem}
+      .btn{padding:6px 10px;font-size:0.9rem}
+    }
+    @media(max-width:768px) {
+      body{flex-direction:column}
+      .menu-toggle{display:flex}
+      .sidebar{width:100%;padding:10px;display:none;flex-direction:column;position:absolute;top:60px;left:0;right:0;z-index:1000;border-bottom:1px solid #1e90ff}
+      .sidebar.open{display:flex}
+      .sidebar h2{display:none}
+      .sidebar a{padding:12px 20px;font-size:0.95rem;text-align:left}
+      .main{padding:12px;margin-top:0}
+      .header{flex-direction:column;align-items:flex-start;gap:8px}
+      .header h1{width:100%;font-size:1rem}
+      .view-toggle{margin-left:0;width:100%;}
+      .btn{width:100%;text-align:center;font-size:0.9rem}
+      .timetable{min-width:100%;font-size:0.9rem;}
+      .timetable th, .timetable td{padding:8px;}
+      .schedule-item{padding:8px;font-size:0.8rem;}
+    }
+    @media(max-width:480px){
+      .menu-toggle{padding:12px 15px;font-size:1.3rem}
+      .sidebar{top:50px}
+      .sidebar a{padding:10px 15px;font-size:0.9rem}
+      .main{padding:8px}
+      .header{padding:0;margin-bottom:12px}
+      .header h1{font-size:0.95rem}
+      .btn{padding:8px;font-size:0.85rem}
+      .timetable-container{padding:10px}
+      .timetable{font-size:0.8rem}
+      .timetable th, .timetable td{padding:8px 4px}
+      .schedule-item{padding:4px 6px;font-size:0.75rem}
+    }
+  </style>
+</head>
+<body>
+  <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+    <span>Menu</span>
+  </button>
+  <div class="sidebar" id="sidebar">
+    <h2>Admin Panel</h2>
+    <a href="{{ url_for('dashboard') }}">
+      <i class="fas fa-home"></i> Dashboard
+    </a>
+    <a href="{{ url_for('manage_students') }}">
+      <i class="fas fa-users"></i> Manage Students
+    </a>
+    <a href="{{ url_for('manage_teachers') }}" class="active">
+      <i class="fas fa-chalkboard-teacher"></i> Manage Teachers
+    </a>
+    <a href="{{ url_for('manage_subject') }}">
+      <i class="fas fa-book"></i> Manage Subjects
+    </a>
+    <a href="{{ url_for('fee_control') }}">
+      <i class="fas fa-credit-card"></i> Fees Control
+    </a>
+    <a href="{{ url_for('logout') }}">
+      <i class="fas fa-sign-out-alt"></i> Logout
+    </a>
+  </div>
+  <main class="main">
+    <div class="header">
+      <h1>Teacher Schedule Timetable</h1>
+      <a href="{{ url_for('add_schedule') }}" class="btn"><i class="fas fa-plus"></i> Add Schedule</a>
+      <div class="view-toggle">
+        <button class="active" onclick="showView('timetable', this)"><i class="fas fa-calendar"></i> Timetable</button>
+        <button onclick="showView('list', this)"><i class="fas fa-list"></i> List</button>
+      </div>
+    </div>
+    <div id="timetable-view" class="timetable-container">
+      {% if schedules and schedules|length > 0 %}
+      <table class="timetable">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+            <th>Sunday</th>
+          </tr>
+        </thead>
+        <tbody>
+  <tr>
+    <td class="time-slot">All</td>
+    {% for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] %}
+    <td class="schedule-cell">
+      {% set day_schedules = schedules|selectattr('day', 'equalto', day)|list %}
+      {% if day_schedules|length == 0 %}
+        <span style="color:#bbb;font-size:0.95em;">No schedule</span>
+      {% else %}
+        {% for s in day_schedules %}
+        <div class="schedule-item">
+          <div class="schedule-item-header">{{ s.subject }}</div>
+          <div class="schedule-item-meta"><strong>Teacher:</strong> {{ s.Name or s.teacher_name or '—' }}</div>
+          <div class="schedule-item-meta"><strong>Time:</strong> {{ s.time_start }} - {{ s.time_end }}</div>
+          {% if s.terms %}<div class="schedule-item-meta"><strong>Term:</strong> {{ s.terms }}</div>{% endif %}
+        </div>
+        {% endfor %}
+      {% endif %}
+    </td>
+    {% endfor %}
+  </tr>
+  </tbody>
+        </table>
+        {% else %}
+        <div class="no-data"><i class="fas fa-calendar-times"></i><p>No schedules found. <a href="{{ url_for('add_schedule') }}">Create one now</a></p></div>
+        {% endif %}
+      </div>
+      <div id="list-view" class="timetable-container list-view">
+        {% if schedules and schedules|length > 0 %}
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Teacher Name</th>
+              <th>Subject</th>
+              <th>Terms</th>
+              <th>Day</th>
+              <th>Time Start</th>
+              <th>Time End</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in schedules %}
+            <tr>
+              <td>{{ s.schedule_id }}</td>
+              <td>{{ s.Name or s.teacher_name or '—' }}</td>
+              <td>{{ s.subject }}</td>
+              <td>{{ s.terms or '—' }}</td>
+              <td>{{ s.day }}</td>
+              <td>{{ s.time_start }}</td>
+              <td>{{ s.time_end }}</td>
+              <td>
+                <a href="{{ url_for('edit_schedule', id=s.schedule_id) }}" class="btn" style="padding:5px 10px; font-size:0.85rem;"><i class="fas fa-edit"></i> Edit</a>
+                <form method="post" action="{{ url_for('delete_schedule', id=s.schedule_id) }}" style="display:inline" onsubmit="return confirm('Delete this schedule?');">
+                  <button type="submit" class="btn danger" style="padding:5px 10px; font-size:0.85rem;"><i class="fas fa-trash"></i> Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+  </tbody>
+      </table>
+      {% else %}
+      <div class="no-data">No schedules found.</div>
+      {% endif %}
+    </div>
+  </main>
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      menuToggle.innerHTML = sidebar.classList.contains('open') 
+        ? '<i class="fas fa-times"></i><span>Close</span>' 
+        : '<i class="fas fa-bars"></i><span>Menu</span>';
+    });
+    sidebar.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        menuToggle.innerHTML = '<i class="fas fa-bars"></i><span>Menu</span>';
+      });
+    });
+    function showView(view, btn) {
+      document.getElementById('timetable-view').style.display = view === 'timetable' ? 'block' : 'none';
+      document.getElementById('list-view').classList.toggle('active', view === 'list');
+      
+      const btns = document.querySelectorAll('.view-toggle button');
+      btns.forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
