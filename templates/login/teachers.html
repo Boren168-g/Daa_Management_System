@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Teacher — Sign In / Sign Up</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="panel1" aria-label="Actions">
+  <main class="login-wrap" role="main">
+    <header class="login-header">
+      <h1 class="brand1">Teacher</h1>
+    </header>
+
+    <section class="login-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flashes">
+            {% for cat, msg in messages %}
+              <li class="{{ cat }}">{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      <h3 style="font-size:16px;font-weight:700">Sign In</h3>
+      <form method="post" action="{{ url_for('teachers_page') }}" id="teacherLogin">
+        <div class="field">
+          <label for="teacher_name">Name</label>
+          <input id="teacher_name" name="name" class="input" type="text" required>
+        </div>
+        <div class="field">
+          <label for="teacher_pass">Password</label>
+          <input id="teacher_pass" name="password" class="input" type="password" required>
+        </div>
+        <div class="field">
+          <button class="btn btn-primary" type="submit">Sign In</button>
+          <a class="btn btn-ghost" href="{{ url_for('index') }}">Home</a>
+        </div>
+      </form>
+    </section>
+  </main>
+  <div class="cta" aria-label="Actions">
+      <div style="margin-top:20px"></div>
+      <a class="btn btn-ghost" href="{{ url_for('create_teacher') }}">Create new account</a>
+      <small style="margin-top:8px">If you already have an account, pick the matching role to proceed.</small>
+  </div>
+  </div>
+</body>
+</html>
