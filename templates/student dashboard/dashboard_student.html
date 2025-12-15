@@ -1,1 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard | School DAA System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    body { display: flex; min-height: 100vh; background: #f4f6f9; color: #333; }
+    .sidebar { width: 250px; background: #2d3e50; color: #fff; padding: 20px 0; }
+    .sidebar h2 { text-align: center; margin-bottom: 30px; }
+    .sidebar a { text-decoration: none; color: #fff; padding: 15px 20px; display: block; transition: background 0.2s; }
+    .sidebar a:hover, .sidebar a.active { background: #1e90ff; }
+    .main-content { flex: 1; padding: 20px 30px; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    header h1 { font-size: 1.4rem; color: #2d3e50; }
+    header a { padding: 8px 16px; border: none; border-radius: 8px; background: #e74c3c; color: #fff; text-decoration: none; cursor: pointer; }
+    .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+    .card { background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; }
+    .card h3 { color: #555; }
+    .card p { font-size: 1.7rem; color: #27ae60; font-weight: 600; margin-top: 10px; }
+    section { margin-top: 40px; background: #fff; border-radius: 12px; padding: 25px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+    section h2 { margin-bottom: 20px; color: #2d3e50; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Student</h2>
+    <a href="{{ url_for('dashboard') }}" class="active">Dashboard</a>
+    <a href="#">My Courses</a>
+    <a href="#">Assignments</a>
+    <a href="#">Grades</a>
+    <a href="#">Messages</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </div>
 
+  <div class="main-content">
+    <header>
+      <h1>Welcome, {{ name }}</h1>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </header>
+
+    <div class="dashboard-cards">
+      <div class="card">
+        <h3>My Classes</h3>
+        <p>6</p>
+      </div>
+      <div class="card">
+        <h3>Avg Grade</h3>
+        <p>85%</p>
+      </div>
+      <div class="card">
+        <h3>Pending Assignments</h3>
+        <p>3</p>
+      </div>
+      <div class="card">
+        <h3>Attendance</h3>
+        <p>92%</p>
+      </div>
+    </div>
+
+    <section>
+      <h2>My Courses</h2>
+      <p>No courses assigned yet.</p>
+    </section>
+  </div>
+</body>
+</html>
