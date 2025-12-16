@@ -1,1 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - DAA Management System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Basic styling for the login options */
+        body { font-family: sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); width: 300px; text-align: center; }
+        .login-container h1 { margin-bottom: 20px; color: #2d3e50; }
+        .role-link { display: block; margin: 10px 0; padding: 12px; border: 1px solid #ccc; border-radius: 4px; text-decoration: none; color: #333; transition: background-color 0.2s; }
+        .role-link:hover { background-color: #e9e9e9; }
+        /* Style for the actual login form */
+        #loginForm { text-align: left; }
+        #loginForm label { display: block; margin-top: 10px; font-weight: bold; }
+        #loginForm input, #loginForm select { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        #loginForm button { background-color: #1e90ff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
+        #loginForm button:hover { background-color: #1a78e2; }
+        .flashes { list-style: none; padding: 0; margin-bottom: 20px; }
+        .flashes li { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .info { background: #bee5eb; color: #0c5460; border: 1px solid #b8daff; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>DAA Management System</h1>
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flashes">
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('index') }}" id="loginForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            
+            <label for="role">Select Role:</label>
+            <select id="role" name="role" required>
+                <option value="" disabled selected>Choose your role</option>
+                <option value="admin">Administrator</option>
+                <option value="teacher">Teacher</option>
+                <option value="student">Student</option>
+                </select>
+            
+            <button type="submit">Log In</button>
+        </form>
+
+    </div>
+</body>
+</html>
