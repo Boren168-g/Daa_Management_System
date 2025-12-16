@@ -33,7 +33,7 @@ def get_connection_details():
 DB_CONN_DETAILS = get_connection_details()
 
 def init_db():
-    """Initializes the PostgreSQL database and creates all tables."""
+    """Initializes the PostgreSQL database and creates all tables with lowercase identifiers."""
     conn = None
     try:
         print("Attempting to connect to the database...")
@@ -43,94 +43,102 @@ def init_db():
         print("Connection established. Creating tables...")
 
         # ADMINISTRATORS
+        # Column names changed from "ID", "Name", "Password" to id, name, password
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
-                "ID" SERIAL PRIMARY KEY,
-                "Name" VARCHAR(255) NOT NULL UNIQUE,
-                "Password" VARCHAR(255) NOT NULL
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL
             );
         """)
 
         # STUDENTS
+        # Column names changed from "ID", "Name", "Password", "Phone", "Gender" to id, name, password, phone, gender
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT} (
-                "ID" SERIAL PRIMARY KEY,
-                "Name" VARCHAR(255) NOT NULL UNIQUE,
-                "Password" VARCHAR(255) NOT NULL,
-                "Phone" VARCHAR(50),
-                "Gender" VARCHAR(50) CHECK ("Gender" IN ('male','female','other')) DEFAULT 'other'
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
+                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other'
             );
         """)
 
         # TEACHERS
+        # Column names changed from "ID", "Name", "Password", "Phone", "Gender" to id, name, password, phone, gender
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_TEACHER} (
-                "ID" SERIAL PRIMARY KEY,
-                "Name" VARCHAR(255) NOT NULL UNIQUE,
-                "Password" VARCHAR(255) NOT NULL,
-                "Phone" VARCHAR(50),
-                "Gender" VARCHAR(50) CHECK ("Gender" IN ('male','female','other')) DEFAULT 'other'
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
+                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other'
             );
         """)
 
         # PARENTS
+        # Column names changed from "ID", "Password", "ChildrentID" to id, password, childrentid
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_PARENT} (
-                "ID" SERIAL PRIMARY KEY,
-                "Password" VARCHAR(255) NOT NULL,
-                "ChildrentID" INT UNIQUE,
-                CONSTRAINT fk_parent_child FOREIGN KEY ("ChildrentID")
-                    REFERENCES {TABLE_NAME_STUDENT} ("ID")
+                id SERIAL PRIMARY KEY,
+                password VARCHAR(255) NOT NULL,
+                childrentid INT UNIQUE,
+                CONSTRAINT fk_parent_child FOREIGN KEY (childrentid)
+                    REFERENCES {TABLE_NAME_STUDENT} (id)
                     ON DELETE SET NULL ON UPDATE CASCADE
             );
         """)
 
         # STUDENT_DATA
+        # Column names changed from mixed-case quoted to lowercase unquoted
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_DATA} (
-                "ID" INT PRIMARY KEY,
-                "Name" VARCHAR(255) NOT NULL,
-                "Gender" VARCHAR(50) CHECK ("Gender" IN ('male','female','other')) DEFAULT 'other',
-                "Class" VARCHAR(50),
-                "Grade" VARCHAR(10),
-                "Password" VARCHAR(255) NOT NULL,
-                "Phone" VARCHAR(50),
-                CONSTRAINT fk_student_data FOREIGN KEY ("ID")
-                    REFERENCES {TABLE_NAME_STUDENT} ("ID")
+                id INT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other',
+                class VARCHAR(50),
+                grade VARCHAR(10),
+                password VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
+                CONSTRAINT fk_student_data FOREIGN KEY (id)
+                    REFERENCES {TABLE_NAME_STUDENT} (id)
                     ON DELETE CASCADE ON UPDATE CASCADE
             );
         """)
         
         # SUBJECTS
+        # teacher_id is now lowercase
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SUBJECT} (
                 subject_id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL UNIQUE,
                 teacher_id INT,
                 CONSTRAINT fk_subject_teacher FOREIGN KEY (teacher_id) 
-                    REFERENCES {TABLE_NAME_TEACHER} ("ID") 
+                    REFERENCES {TABLE_NAME_TEACHER} (id) 
                     ON DELETE SET NULL ON UPDATE CASCADE
             );
         """)
         
         # SCHEDULES_TABLE
+        # Columns changed to lowercase
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SCHEDULE} (
                 schedule_id SERIAL PRIMARY KEY,
-                "ID" INT NOT NULL, 
-                "Name" VARCHAR(255),
-                "Terms" VARCHAR(100),
-                "Subject" VARCHAR(255) NOT NULL,
-                "Day" VARCHAR(20) NOT NULL,
-                Time_start TIME WITHOUT TIME ZONE NOT NULL,
-                Time_end TIME WITHOUT TIME ZONE NOT NULL,
-                CONSTRAINT fk_schedule_teacher FOREIGN KEY ("ID") 
-                    REFERENCES {TABLE_NAME_TEACHER} ("ID") 
+                id INT NOT NULL, 
+                name VARCHAR(255),
+                terms VARCHAR(100),
+                subject VARCHAR(255) NOT NULL,
+                day VARCHAR(20) NOT NULL,
+                time_start TIME WITHOUT TIME ZONE NOT NULL,
+                time_end TIME WITHOUT TIME ZONE NOT NULL,
+                CONSTRAINT fk_schedule_teacher FOREIGN KEY (id) 
+                    REFERENCES {TABLE_NAME_TEACHER} (id) 
                     ON DELETE CASCADE ON UPDATE CASCADE
             );
         """)
         
         # STUDENT_SUBJECTS
+        # Foreign keys changed to lowercase
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_SUBJECTS} (
                 enrollment_id SERIAL PRIMARY KEY,
@@ -139,13 +147,14 @@ def init_db():
                 enrolled_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (student_id, subject_id),
                 CONSTRAINT fk_enrollment_student FOREIGN KEY (student_id) 
-                    REFERENCES {TABLE_NAME_STUDENT} ("ID") ON DELETE CASCADE ON UPDATE CASCADE,
+                    REFERENCES {TABLE_NAME_STUDENT} (id) ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT fk_enrollment_subject FOREIGN KEY (subject_id) 
                     REFERENCES {TABLE_NAME_SUBJECT} (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
             );
         """)
 
         # FEES
+        # Foreign keys changed to lowercase
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_FEES} (
                 fee_id SERIAL PRIMARY KEY,
@@ -158,7 +167,7 @@ def init_db():
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (student_id, subject_id),
                 CONSTRAINT fk_fee_student FOREIGN KEY (student_id) 
-                    REFERENCES {TABLE_NAME_STUDENT} ("ID") ON DELETE CASCADE ON UPDATE CASCADE,
+                    REFERENCES {TABLE_NAME_STUDENT} (id) ON DELETE CASCADE ON UPDATE CASCADE,
                 CONSTRAINT fk_fee_subject FOREIGN KEY (subject_id) 
                     REFERENCES {TABLE_NAME_SUBJECT} (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
             );
