@@ -41,9 +41,7 @@ TABLE_NAME_STUDENT_SUBJECTS = "student_subjects"
 
 
 def get_db_conn(dict_cursor=False):
-    """
-    Establishes a connection to the PostgreSQL database.
-    """
+    """Establishes a connection to the PostgreSQL database."""
     conn = None
     cursor = None
     try:
@@ -66,7 +64,6 @@ def get_db_conn(dict_cursor=False):
 def index():
     return render_template('index.html')
 
-# Fix for url_for('login')
 @app.route('/login')
 def login():
     """Routes the user to the correct role-specific login page."""
@@ -83,7 +80,6 @@ def login():
     
     return redirect(url_for(target_endpoint))
 
-# Fix for url_for('signup')
 @app.route('/signup')
 def signup():
     """Renders a page for the user to choose their role for account creation."""
@@ -148,7 +144,7 @@ def create_admin():
     return render_template('sign in/create_admin.html')
 
 
-# --- TEACHER ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+# --- TEACHER ROUTES ---
 
 @app.route('/teachers', methods=['GET', 'POST'])
 def teachers_page():
@@ -207,7 +203,7 @@ def create_teacher():
     return render_template('sign in/create_teacher.html')
 
 
-# --- STUDENT ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+# --- STUDENT ROUTES ---
 
 @app.route('/students', methods=['GET', 'POST'])
 def students_page():
@@ -275,7 +271,7 @@ def create_student():
     return render_template('sign in/create_student.html')
 
 
-# --- PARENT ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+# --- PARENT ROUTES ---
 
 @app.route('/parents', methods=['GET', 'POST'])
 def parents_page():
@@ -377,7 +373,6 @@ def dashboard():
 
 @app.route('/manage_students')
 def manage_students():
-    # ... (management code from previous response) ...
     q = request.args.get('q', '').strip()
     conn = None
     cursor = None
@@ -406,7 +401,6 @@ def manage_students():
 
 @app.route('/add_student', methods=['GET', 'POST'])
 def add_student():
-    # ... (add_student code from previous response) ...
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         gender = request.form.get('gender', 'other').strip().lower() or 'other'
