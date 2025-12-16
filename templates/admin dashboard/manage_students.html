@@ -155,7 +155,7 @@
           <tbody id="studentsTableBody">
             {% for s in students %}
             <tr>
-              <td>{{ s.ID }}</td>
+              <td>{{ s.id }}</td>
               <td class="student-name">{{ s.Name }}</td>
               <td>{{ s.Class or '—' }}</td>
               <td>{{ s.Grade or '—' }}</td>
@@ -164,8 +164,8 @@
               <td>{{ s.Phone or '—' }}</td>
               <td>
                 <div class="actions">
-                  <a class="action-btn" href="{{ url_for('edit_student', id=s.ID) }}"><i class="fas fa-edit"></i> Edit</a>
-                  <form method="post" action="{{ url_for('delete_student', id=s.ID) }}" style="display:inline" onsubmit="return confirm('Delete student {{ s.Name }}?');">
+                  <a class="action-btn" href="{{ url_for('edit_student', id=s.id) }}"><i class="fas fa-edit"></i> Edit</a>
+                  <form method="post" action="{{ url_for('delete_student', id=s.id) }}" style="display:inline" onsubmit="return confirm('Delete student {{ s.Name }}?');">
                     <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
                   </form>
                 </div>
