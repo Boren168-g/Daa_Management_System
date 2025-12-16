@@ -23,7 +23,7 @@
           </ul> {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('signup') }}?role=parent" id="createParent" novalidate>
+      <form method="post" action="{{ url_for('create_parent') }}" id="createParent" novalidate>
         <div class="field"/>
         <div class="field">
           <label for="parent_pass">Password</label>
