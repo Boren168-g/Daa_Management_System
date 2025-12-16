@@ -10,7 +10,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
 # --- PostgreSQL Connection Setup ---
-# The DATABASE_URL is essential for Render deployment.
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -67,16 +66,15 @@ def get_db_conn(dict_cursor=False):
 def index():
     return render_template('index.html')
 
-# --- CRITICAL FIX: Renaming the function to 'login' to match the template's url_for('login') ---
+# --- Login Router (Fix for url_for('login')) ---
 @app.route('/login')
 def login():
     """
     Routes the user to the correct role-specific login page based on the 
-    'role' query parameter (e.g., /login?role=administrator).
+    'role' query parameter.
     """
     role = request.args.get('role', 'administrator').lower()
     
-    # Map the role parameter to the Flask endpoint name
     endpoint_map = {
         'administrator': 'administrators_page',
         'teacher': 'teachers_page',
@@ -86,8 +84,18 @@ def login():
     
     target_endpoint = endpoint_map.get(role, 'administrators_page')
     
-    # Redirect to the specific login page
     return redirect(url_for(target_endpoint))
+
+# --- NEW: Signup Chooser (Fix for url_for('signup')) ---
+@app.route('/signup')
+def signup():
+    """
+    Renders a page for the user to choose their role for account creation.
+    This fixes the BuildError for the 'signup' endpoint.
+    """
+    # Assuming you have a template named 'sign_up_chooser.html' in your templates directory
+    # that contains links to create_admin, create_student, etc.
+    return render_template('sign_up_chooser.html')
 
 
 # --- Login and Signup Routes (Adapted for PostgreSQL/psycopg2) ---
@@ -178,7 +186,6 @@ def manage_students():
         conn, cursor = get_db_conn(dict_cursor=True)
         sql = f'SELECT "ID", "Name", "Gender", "Class", "Grade", "Password", "Phone" FROM {TABLE_NAME_STUDENT_DATA}'
         if q:
-            # PostgreSQL uses ILIKE for case-insensitive LIKE
             sql += ' WHERE "Name" ILIKE %s ORDER BY "ID"'
             cursor.execute(sql, (f"%{q}%",))
         else:
