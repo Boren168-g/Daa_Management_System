@@ -48,7 +48,7 @@ def get_db_conn(dict_cursor=False):
     cursor = conn.cursor(cursor_factory=extras.DictCursor) if dict_cursor else conn.cursor()
     return conn, cursor
 
-# --- AUTHENTICATION (UNCHANGED) ---
+# --- AUTHENTICATION (CHANGED TEMPLATE NAME) ---
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -95,7 +95,7 @@ def index():
             except Exception:
                 pass
 
-    return render_template('login.html')
+    return render_template('index.html') # *** MODIFIED LINE: Changed 'login.html' to 'index.html' ***
 
 @app.route('/dashboard')
 def dashboard():
