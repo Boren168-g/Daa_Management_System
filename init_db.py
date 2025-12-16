@@ -1,10 +1,9 @@
 import os
 import psycopg2
 from urllib.parse import urlparse
-from psycopg2 import extras # Included for completeness, though not strictly needed for init
+from psycopg2 import extras 
 
 # --- PostgreSQL Connection Setup ---
-# NOTE: Ensure this URL is correct for your PostgreSQL database
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -45,8 +44,6 @@ def init_db():
         print("Connection established. Creating/Checking tables...")
 
         # Dropping existing tables to ensure a clean start with correct column names
-        # You may need to run this manually if your deploy script doesn't allow dropping.
-        # This is the safest way to fix column name issues.
         print("ATTENTION: Dropping existing tables to fix schema mismatch...")
         tables_to_drop = [
             TABLE_NAME_FEES, TABLE_NAME_STUDENT_SUBJECTS, TABLE_NAME_SCHEDULE, 
