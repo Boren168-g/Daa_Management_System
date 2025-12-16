@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
-import psycopg2
+import psycopg2 # CORRECT: Using PostgreSQL connector
 from psycopg2 import extras
 from urllib.parse import urlparse
 from datetime import datetime
@@ -9,7 +9,8 @@ app = Flask(__name__)
 # Use a strong secret key from environment variable for production
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
-# --- PostgreSQL Connection Setup ---
+# --- PostgreSQL Connection Setup (Reads from DATABASE_URL) ---
+# NOTE: Replace the placeholder URL below with your actual Render/ElephantSQL URL if it's not set in your environment variables.
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -53,9 +54,8 @@ def get_db_conn(dict_cursor=False):
         return conn, cursor
     except Exception as e:
         print(f"Database connection error: {e}")
-        if cursor: cursor.close()
-        if conn: conn.close()
-        raise
+        # Raising the error is better for debugging the ISE
+        raise 
 
 
 # --- Core Routes ---
@@ -86,7 +86,7 @@ def signup():
     return render_template('sign_up_chooser.html')
 
 
-# --- ADMINISTRATOR ROUTES (FIXED) ---
+# --- ADMINISTRATOR ROUTES (Login/Creation) ---
 
 @app.route('/administrators', methods=['GET', 'POST'])
 def administrators_page():
@@ -98,7 +98,7 @@ def administrators_page():
             return redirect(url_for('administrators_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_ADMIN} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -110,9 +110,9 @@ def administrators_page():
             session['user_name'] = row[1]
             session['user_role'] = 'administrator'
             flash('Login successful.', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('dashboard')) # Redirect to dashboard
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Login error: ' + str(e), 'error')
             return redirect(url_for('administrators_page'))
     return render_template('login/administrators.html')
 
@@ -127,7 +127,7 @@ def create_admin():
             return redirect(url_for('create_admin'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed "Name", "Password" to name, password
+            # FIX: Using lowercase 'name', 'password'
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_ADMIN} (name, password) VALUES (%s, %s)',
                 (name, password)
@@ -141,12 +141,12 @@ def create_admin():
             flash('An account with that name already exists.', 'error')
             return redirect(url_for('create_admin'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Creation error: ' + str(e), 'error')
             return redirect(url_for('create_admin'))
     return render_template('sign in/create_admin.html')
 
 
-# --- TEACHER ROUTES (FIXED) ---
+# --- TEACHER ROUTES (Login/Creation) ---
 
 @app.route('/teachers', methods=['GET', 'POST'])
 def teachers_page():
@@ -158,7 +158,7 @@ def teachers_page():
             return redirect(url_for('teachers_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_TEACHER} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -172,7 +172,7 @@ def teachers_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Login error: ' + str(e), 'error')
             return redirect(url_for('teachers_page'))
     return render_template('login/teachers.html')
 
@@ -188,7 +188,7 @@ def create_teacher():
             return redirect(url_for('create_teacher'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed quoted mixed-case column names to unquoted lowercase
+            # FIX: Using lowercase column names
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_TEACHER} (name, password, phone, gender) VALUES (%s, %s, %s, %s)',
                 (name, password, phone, gender)
@@ -202,12 +202,12 @@ def create_teacher():
             flash('An account with that name already exists.', 'error')
             return redirect(url_for('create_teacher'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Creation error: ' + str(e), 'error')
             return redirect(url_for('create_teacher'))
     return render_template('sign in/create_teacher.html')
 
 
-# --- STUDENT ROUTES (FIXED) ---
+# --- STUDENT ROUTES (Login/Creation) ---
 
 @app.route('/students', methods=['GET', 'POST'])
 def students_page():
@@ -219,7 +219,7 @@ def students_page():
             return redirect(url_for('students_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_STUDENT} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -233,7 +233,7 @@ def students_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Login error: ' + str(e), 'error')
             return redirect(url_for('students_page'))
     return render_template('login/students.html')
 
@@ -249,16 +249,14 @@ def create_student():
             return redirect(url_for('create_student'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed quoted mixed-case column names to unquoted lowercase
-            # 1. Insert into STUDENTS and get the new ID
+            # FIX: Using lowercase column names
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
             )
             new_id = cursor.fetchone()[0] 
             
-            # 2. Insert into STUDENT_DATA (maintaining consistency)
-            # FIX: Changed quoted mixed-case column names to unquoted lowercase
+            # FIX: Using lowercase column names in student_data
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT_DATA} (id, name, gender, password, phone) VALUES (%s, %s, %s, %s, %s)',
                 (new_id, name, gender, password, phone)
@@ -273,17 +271,17 @@ def create_student():
             flash('An account with that name already exists.', 'error')
             return redirect(url_for('create_student'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Creation error: ' + str(e), 'error')
             return redirect(url_for('create_student'))
     return render_template('sign in/create_student.html')
 
 
-# --- PARENT ROUTES (FIXED) ---
+# --- PARENT ROUTES (Login/Creation) ---
 
 @app.route('/parents', methods=['GET', 'POST'])
 def parents_page():
     if request.method == 'POST':
-        pid = request.form.get('name', '').strip() # Assuming 'name' field holds Parent ID
+        pid = request.form.get('name', '').strip() # Expecting parent to input child's ID in 'name' field
         password = request.form.get('password', '').strip()
         if not (pid and password):
             flash('All fields are required.', 'error')
@@ -296,7 +294,7 @@ def parents_page():
 
         try:
             conn, cursor = get_db_conn()
-            # FIX: Changed "ID", "Password" to id, password
+            # FIX: Using lowercase 'id', 'password'
             cursor.execute(f'SELECT id, password FROM {TABLE_NAME_PARENT} WHERE id=%s', (parent_id,))
             row = cursor.fetchone()
             cursor.close()
@@ -311,7 +309,7 @@ def parents_page():
             flash('Login successful.', 'success')
             return redirect(url_for('dashboard'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Login error: ' + str(e), 'error')
             return redirect(url_for('parents_page'))
 
     return render_template('login/parents.html')
@@ -332,7 +330,7 @@ def create_parent():
 
         try:
             conn, cursor = get_db_conn()
-            # Verify child exists
+            # Verify child exists (lowercase 'id')
             cursor.execute(f'SELECT id FROM {TABLE_NAME_STUDENT} WHERE id=%s', (child_int,))
             student = cursor.fetchone()
             if not student:
@@ -340,8 +338,7 @@ def create_parent():
                 cursor.close(); conn.close()
                 return redirect(url_for('create_parent'))
 
-            # Insert new parent record
-            # FIX: Changed "Password", "ChildrentID" to password, childrentid
+            # Insert new parent record (lowercase 'password', 'childrentid')
             cursor.execute(f'INSERT INTO {TABLE_NAME_PARENT} (password, childrentid) VALUES (%s, %s) RETURNING id',
                            (password, child_int))
             new_id = cursor.fetchone()[0]
@@ -354,13 +351,13 @@ def create_parent():
             flash('A parent is already registered for this child, or the ID is duplicated.', 'error')
             return redirect(url_for('create_parent'))
         except Exception as e:
-            flash('Database error: ' + str(e), 'error')
+            flash('Creation error: ' + str(e), 'error')
             return redirect(url_for('create_parent'))
 
     return render_template('sign in/create_parent.html')
 
 
-# --- DASHBOARD & MANAGEMENT ROUTES (FIXED) ---
+# --- DASHBOARD & MANAGEMENT ROUTES ---
 
 @app.route('/dashboard')
 def dashboard():
@@ -368,6 +365,8 @@ def dashboard():
         flash('Please log in first.', 'error')
         return redirect(url_for('index'))
     
+    # This function is fine, as long as the database connection (get_db_conn) 
+    # doesn't fail on app startup/load. The previous fixes should resolve this.
     user_role = session.get('user_role', 'user')
     user_name = session.get('user_name', 'Guest')
     dashboard_map = {
@@ -388,7 +387,7 @@ def manage_students():
     students = []
     try:
         conn, cursor = get_db_conn(dict_cursor=True)
-        # FIX: Changed quoted mixed-case column names to unquoted lowercase
+        # FIX: Using lowercase column names
         sql = f'SELECT id, name, gender, class, grade, password, phone FROM {TABLE_NAME_STUDENT_DATA}'
         if q:
             sql += ' WHERE name ILIKE %s ORDER BY id'
@@ -428,16 +427,14 @@ def add_student():
         try:
             conn, cursor = get_db_conn()
 
-            # 1. Insert into STUDENTS and use RETURNING to get the new ID (PostgreSQL standard)
-            # FIX: Changed quoted mixed-case column names to unquoted lowercase
+            # 1. Insert into STUDENTS and use RETURNING to get the new ID
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
             )
             new_id = cursor.fetchone()[0]
 
-            # 2. Insert / update student_data with the new ID using ON CONFLICT (PostgreSQL standard)
-            # FIX: Changed quoted mixed-case column names to unquoted lowercase
+            # 2. Insert / update student_data with the new ID using ON CONFLICT 
             cursor.execute(
                 f"""
                 INSERT INTO {TABLE_NAME_STUDENT_DATA} (id, name, gender, class, grade, password, phone)
@@ -480,4 +477,6 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
+    # Do not run init_db here unless you are running locally and know what you are doing. 
+    # For Render/deployment, use a separate build script.
     app.run(debug=True)
