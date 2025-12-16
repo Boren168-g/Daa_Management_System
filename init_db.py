@@ -1,8 +1,10 @@
 import os
 import psycopg2
 from urllib.parse import urlparse
+from psycopg2 import extras # Included for completeness, though not strictly needed for init
 
 # --- PostgreSQL Connection Setup ---
+# NOTE: Ensure this URL is correct for your PostgreSQL database
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -40,10 +42,21 @@ def init_db():
         conn = psycopg2.connect(**DB_CONN_DETAILS)
         conn.autocommit = True
         cursor = conn.cursor()
-        print("Connection established. Creating tables...")
+        print("Connection established. Creating/Checking tables...")
 
-        # ADMINISTRATORS
-        # Column names changed from "ID", "Name", "Password" to id, name, password
+        # Dropping existing tables to ensure a clean start with correct column names
+        # You may need to run this manually if your deploy script doesn't allow dropping.
+        # This is the safest way to fix column name issues.
+        print("ATTENTION: Dropping existing tables to fix schema mismatch...")
+        tables_to_drop = [
+            TABLE_NAME_FEES, TABLE_NAME_STUDENT_SUBJECTS, TABLE_NAME_SCHEDULE, 
+            TABLE_NAME_SUBJECT, TABLE_NAME_PARENT, TABLE_NAME_STUDENT_DATA, 
+            TABLE_NAME_STUDENT, TABLE_NAME_TEACHER, TABLE_NAME_ADMIN
+        ]
+        for table in tables_to_drop:
+            cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE;")
+
+        # ADMINISTRATORS (id, name, password)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
                 id SERIAL PRIMARY KEY,
@@ -52,8 +65,7 @@ def init_db():
             );
         """)
 
-        # STUDENTS
-        # Column names changed from "ID", "Name", "Password", "Phone", "Gender" to id, name, password, phone, gender
+        # STUDENTS (id, name, password, phone, gender)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT} (
                 id SERIAL PRIMARY KEY,
@@ -64,8 +76,7 @@ def init_db():
             );
         """)
 
-        # TEACHERS
-        # Column names changed from "ID", "Name", "Password", "Phone", "Gender" to id, name, password, phone, gender
+        # TEACHERS (id, name, password, phone, gender)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_TEACHER} (
                 id SERIAL PRIMARY KEY,
@@ -76,8 +87,7 @@ def init_db():
             );
         """)
 
-        # PARENTS
-        # Column names changed from "ID", "Password", "ChildrentID" to id, password, childrentid
+        # PARENTS (id, password, childrentid)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_PARENT} (
                 id SERIAL PRIMARY KEY,
@@ -89,8 +99,7 @@ def init_db():
             );
         """)
 
-        # STUDENT_DATA
-        # Column names changed from mixed-case quoted to lowercase unquoted
+        # STUDENT_DATA (id, name, gender, class, grade, password, phone)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_DATA} (
                 id INT PRIMARY KEY,
@@ -106,8 +115,7 @@ def init_db():
             );
         """)
         
-        # SUBJECTS
-        # teacher_id is now lowercase
+        # SUBJECTS (subject_id, name, teacher_id)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SUBJECT} (
                 subject_id SERIAL PRIMARY KEY,
@@ -119,8 +127,7 @@ def init_db():
             );
         """)
         
-        # SCHEDULES_TABLE
-        # Columns changed to lowercase
+        # SCHEDULES_TABLE (schedule_id, id, name, terms, subject, day, time_start, time_end)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SCHEDULE} (
                 schedule_id SERIAL PRIMARY KEY,
@@ -137,8 +144,7 @@ def init_db():
             );
         """)
         
-        # STUDENT_SUBJECTS
-        # Foreign keys changed to lowercase
+        # STUDENT_SUBJECTS (enrollment_id, student_id, subject_id)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_SUBJECTS} (
                 enrollment_id SERIAL PRIMARY KEY,
@@ -153,8 +159,7 @@ def init_db():
             );
         """)
 
-        # FEES
-        # Foreign keys changed to lowercase
+        # FEES (fee_id, student_id, subject_id, amount, paid, status, due_date)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_FEES} (
                 fee_id SERIAL PRIMARY KEY,
@@ -174,7 +179,7 @@ def init_db():
         """)
 
         cursor.close()
-        print("Database initialized successfully with PostgreSQL tables.")
+        print("Database initialized successfully with PostgreSQL tables and lowercase columns.")
         
     except Exception as e:
         print(f"Database initialization error: {e}")
