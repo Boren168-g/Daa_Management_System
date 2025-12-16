@@ -66,13 +66,10 @@ def get_db_conn(dict_cursor=False):
 def index():
     return render_template('index.html')
 
-# --- Login Router (Fix for url_for('login')) ---
+# Fix for url_for('login')
 @app.route('/login')
 def login():
-    """
-    Routes the user to the correct role-specific login page based on the 
-    'role' query parameter.
-    """
+    """Routes the user to the correct role-specific login page."""
     role = request.args.get('role', 'administrator').lower()
     
     endpoint_map = {
@@ -86,19 +83,14 @@ def login():
     
     return redirect(url_for(target_endpoint))
 
-# --- NEW: Signup Chooser (Fix for url_for('signup')) ---
+# Fix for url_for('signup')
 @app.route('/signup')
 def signup():
-    """
-    Renders a page for the user to choose their role for account creation.
-    This fixes the BuildError for the 'signup' endpoint.
-    """
-    # Assuming you have a template named 'sign_up_chooser.html' in your templates directory
-    # that contains links to create_admin, create_student, etc.
+    """Renders a page for the user to choose their role for account creation."""
     return render_template('sign_up_chooser.html')
 
 
-# --- Login and Signup Routes (Adapted for PostgreSQL/psycopg2) ---
+# --- ADMINISTRATOR ROUTES ---
 
 @app.route('/administrators', methods=['GET', 'POST'])
 def administrators_page():
@@ -156,6 +148,215 @@ def create_admin():
     return render_template('sign in/create_admin.html')
 
 
+# --- TEACHER ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+
+@app.route('/teachers', methods=['GET', 'POST'])
+def teachers_page():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        password = request.form.get('password', '').strip()
+        if not (name and password):
+            flash('All fields are required.', 'error')
+            return redirect(url_for('teachers_page'))
+        try:
+            conn, cursor = get_db_conn()
+            cursor.execute(f'SELECT "ID", "Name", "Password" FROM {TABLE_NAME_TEACHER} WHERE "Name"=%s', (name,))
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if not row or password != row[2]:
+                flash('Invalid credentials.', 'error')
+                return redirect(url_for('teachers_page'))
+            session['user_id'] = row[0]
+            session['user_name'] = row[1]
+            session['user_role'] = 'teacher'
+            flash('Login successful.', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('teachers_page'))
+    return render_template('login/teachers.html')
+
+@app.route('/create_teacher', methods=['GET', 'POST'])
+def create_teacher():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        password = request.form.get('password', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+        gender = request.form.get('gender', '').strip().lower() or 'other'
+        if not (name and password):
+            flash('Name and password are required.', 'error')
+            return redirect(url_for('create_teacher'))
+        try:
+            conn, cursor = get_db_conn()
+            cursor.execute(
+                f'INSERT INTO {TABLE_NAME_TEACHER} ("Name", "Password", "Phone", "Gender") VALUES (%s, %s, %s, %s)',
+                (name, password, phone, gender)
+            )
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash('Teacher account created. You can now sign in.', 'success')
+            return redirect(url_for('teachers_page'))
+        except psycopg2.errors.UniqueViolation:
+            flash('An account with that name already exists.', 'error')
+            return redirect(url_for('create_teacher'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('create_teacher'))
+    return render_template('sign in/create_teacher.html')
+
+
+# --- STUDENT ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+
+@app.route('/students', methods=['GET', 'POST'])
+def students_page():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        password = request.form.get('password', '').strip()
+        if not (name and password):
+            flash('All fields are required.', 'error')
+            return redirect(url_for('students_page'))
+        try:
+            conn, cursor = get_db_conn()
+            cursor.execute(f'SELECT "ID", "Name", "Password" FROM {TABLE_NAME_STUDENT} WHERE "Name"=%s', (name,))
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if not row or password != row[2]:
+                flash('Invalid credentials.', 'error')
+                return redirect(url_for('students_page'))
+            session['user_id'] = row[0]
+            session['user_name'] = row[1]
+            session['user_role'] = 'student'
+            flash('Login successful.', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('students_page'))
+    return render_template('login/students.html')
+
+@app.route('/create_student', methods=['GET', 'POST'])
+def create_student():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        password = request.form.get('password', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+        gender = request.form.get('gender', '').strip().lower() or 'other'
+        if not (name and password):
+            flash('Name and password are required.', 'error')
+            return redirect(url_for('create_student'))
+        try:
+            conn, cursor = get_db_conn()
+            # 1. Insert into STUDENTS and get the new ID
+            cursor.execute(
+                f'INSERT INTO {TABLE_NAME_STUDENT} ("Name", "Password", "Phone", "Gender") VALUES (%s, %s, %s, %s) RETURNING "ID"',
+                (name, password, phone, gender)
+            )
+            new_id = cursor.fetchone()[0] 
+            
+            # 2. Insert into STUDENT_DATA (maintaining consistency)
+            cursor.execute(
+                f'INSERT INTO {TABLE_NAME_STUDENT_DATA} ("ID", "Name", "Gender", "Password", "Phone") VALUES (%s, %s, %s, %s, %s)',
+                (new_id, name, gender, password, phone)
+            )
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash('Student account created. You can now sign in.', 'success')
+            return redirect(url_for('students_page'))
+        except psycopg2.errors.UniqueViolation:
+            flash('An account with that name already exists.', 'error')
+            return redirect(url_for('create_student'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('create_student'))
+    return render_template('sign in/create_student.html')
+
+
+# --- PARENT ROUTES (MISSING IN PREVIOUS ERROR DEBUG) ---
+
+@app.route('/parents', methods=['GET', 'POST'])
+def parents_page():
+    if request.method == 'POST':
+        pid = request.form.get('name', '').strip() # Assuming 'name' field holds Parent ID
+        password = request.form.get('password', '').strip()
+        if not (pid and password):
+            flash('All fields are required.', 'error')
+            return redirect(url_for('parents_page'))
+        try:
+            parent_id = int(pid)
+        except ValueError:
+            flash('Parent ID must be a number.', 'error')
+            return redirect(url_for('parents_page'))
+
+        try:
+            conn, cursor = get_db_conn()
+            cursor.execute(f'SELECT "ID", "Password" FROM {TABLE_NAME_PARENT} WHERE "ID"=%s', (parent_id,))
+            row = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            if not row or password != row[1]:
+                flash('Invalid Parent ID or password.', 'error')
+                return redirect(url_for('parents_page'))
+
+            session['user_id'] = row[0]
+            session['user_name'] = f"Parent#{row[0]}"
+            session['user_role'] = 'parent'
+            flash('Login successful.', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('parents_page'))
+
+    return render_template('login/parents.html')
+
+@app.route('/create_parent', methods=['GET', 'POST'])
+def create_parent():
+    if request.method == 'POST':
+        child_id = request.form.get('child_id', '').strip()
+        password = request.form.get('password', '').strip()
+        if not (child_id and password):
+            flash('Child ID and password are required.', 'error')
+            return redirect(url_for('create_parent'))
+        try:
+            child_int = int(child_id)
+        except ValueError:
+            flash('Child ID must be a number.', 'error')
+            return redirect(url_for('create_parent'))
+
+        try:
+            conn, cursor = get_db_conn()
+            # Verify child exists
+            cursor.execute(f'SELECT "ID" FROM {TABLE_NAME_STUDENT} WHERE "ID"=%s', (child_int,))
+            student = cursor.fetchone()
+            if not student:
+                flash('Student (child) ID not found.', 'error')
+                cursor.close(); conn.close()
+                return redirect(url_for('create_parent'))
+
+            # Insert new parent record
+            cursor.execute(f'INSERT INTO {TABLE_NAME_PARENT} ("Password", "ChildrentID") VALUES (%s, %s) RETURNING "ID"',
+                           (password, child_int))
+            new_id = cursor.fetchone()[0]
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash(f'Parent account created (Parent ID: {new_id}). You can sign in with that ID.', 'success')
+            return redirect(url_for('parents_page'))
+        except psycopg2.errors.UniqueViolation:
+            flash('A parent is already registered for this child, or the ID is duplicated.', 'error')
+            return redirect(url_for('create_parent'))
+        except Exception as e:
+            flash('Database error: ' + str(e), 'error')
+            return redirect(url_for('create_parent'))
+
+    return render_template('sign in/create_parent.html')
+
+
+# --- DASHBOARD & MANAGEMENT ROUTES ---
+
 @app.route('/dashboard')
 def dashboard():
     if 'user_name' not in session:
@@ -174,10 +375,9 @@ def dashboard():
     return render_template(template, name=user_name, role=user_role)
 
 
-# --- Management Routes Sample (Full Conversion) ---
-
 @app.route('/manage_students')
 def manage_students():
+    # ... (management code from previous response) ...
     q = request.args.get('q', '').strip()
     conn = None
     cursor = None
@@ -206,6 +406,7 @@ def manage_students():
 
 @app.route('/add_student', methods=['GET', 'POST'])
 def add_student():
+    # ... (add_student code from previous response) ...
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         gender = request.form.get('gender', 'other').strip().lower() or 'other'
