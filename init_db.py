@@ -41,19 +41,12 @@ def init_db():
         conn = psycopg2.connect(**DB_CONN_DETAILS)
         conn.autocommit = True
         cursor = conn.cursor()
-        print("Connection established. Creating/Checking tables...")
 
-        # Dropping existing tables to ensure a clean start with correct column names
-        print("ATTENTION: Dropping existing tables to fix schema mismatch...")
-        tables_to_drop = [
-            TABLE_NAME_FEES, TABLE_NAME_STUDENT_SUBJECTS, TABLE_NAME_SCHEDULE, 
-            TABLE_NAME_SUBJECT, TABLE_NAME_PARENT, TABLE_NAME_STUDENT_DATA, 
-            TABLE_NAME_STUDENT, TABLE_NAME_TEACHER, TABLE_NAME_ADMIN
-        ]
-        for table in tables_to_drop:
-            cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE;")
-
-        # ADMINISTRATORS (id, name, password)
+        # Drop tables in reverse order (optional, for clean re-initialization)
+        # cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME_FEES}, {TABLE_NAME_STUDENT_SUBJECTS}, {TABLE_NAME_SCHEDULE}, {TABLE_NAME_SUBJECT}, {TABLE_NAME_STUDENT}, {TABLE_NAME_TEACHER}, {TABLE_NAME_ADMIN} CASCADE;")
+        # print("Existing tables dropped.")
+        
+        # ADMINS (id, name, password)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
                 id SERIAL PRIMARY KEY,
@@ -61,97 +54,72 @@ def init_db():
                 password VARCHAR(255) NOT NULL
             );
         """)
+        # Insert initial admin if none exists
+        cursor.execute(f"SELECT COUNT(*) FROM {TABLE_NAME_ADMIN}")
+        if cursor.fetchone()[0] == 0:
+             cursor.execute(f"""
+                INSERT INTO {TABLE_NAME_ADMIN} (name, password) VALUES ('admin', 'admin')
+            """)
+             print("Initial admin created (user: admin, pass: admin).")
 
-        # STUDENTS (id, name, password, phone, gender)
+        # STUDENTS (id, name, gender, class, grade, password, phone)
+        # Using a single table for simplicity, but named 'students'
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT} (
-                id SERIAL PRIMARY KEY,
+                id INT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL UNIQUE,
+                gender VARCHAR(50),
+                class VARCHAR(50),
+                grade VARCHAR(50),
                 password VARCHAR(255) NOT NULL,
-                phone VARCHAR(50),
-                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other'
+                phone VARCHAR(50)
             );
         """)
 
-        # TEACHERS (id, name, password, phone, gender)
+        # TEACHERS (id, name, gender, password, phone)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_TEACHER} (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                phone VARCHAR(50),
-                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other'
-            );
-        """)
-
-        # PARENTS (id, password, childrentid)
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {TABLE_NAME_PARENT} (
-                id SERIAL PRIMARY KEY,
-                password VARCHAR(255) NOT NULL,
-                childrentid INT UNIQUE,
-                CONSTRAINT fk_parent_child FOREIGN KEY (childrentid)
-                    REFERENCES {TABLE_NAME_STUDENT} (id)
-                    ON DELETE SET NULL ON UPDATE CASCADE
-            );
-        """)
-
-        # STUDENT_DATA (id, name, gender, class, grade, password, phone)
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_DATA} (
                 id INT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                gender VARCHAR(50) CHECK (gender IN ('male','female','other')) DEFAULT 'other',
-                class VARCHAR(50),
-                grade VARCHAR(10),
+                name VARCHAR(255) NOT NULL UNIQUE,
+                gender VARCHAR(50),
                 password VARCHAR(255) NOT NULL,
-                phone VARCHAR(50),
-                CONSTRAINT fk_student_data FOREIGN KEY (id)
-                    REFERENCES {TABLE_NAME_STUDENT} (id)
-                    ON DELETE CASCADE ON UPDATE CASCADE
+                phone VARCHAR(50)
             );
         """)
-        
+
         # SUBJECTS (subject_id, name, teacher_id)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SUBJECT} (
                 subject_id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL UNIQUE,
                 teacher_id INT,
-                CONSTRAINT fk_subject_teacher FOREIGN KEY (teacher_id) 
-                    REFERENCES {TABLE_NAME_TEACHER} (id) 
-                    ON DELETE SET NULL ON UPDATE CASCADE
+                CONSTRAINT fk_teacher FOREIGN KEY (teacher_id) 
+                    REFERENCES {TABLE_NAME_TEACHER} (id) ON DELETE SET NULL ON UPDATE CASCADE
             );
         """)
         
-        # SCHEDULES_TABLE (schedule_id, id, name, terms, subject, day, time_start, time_end)
+        # SCHEDULES (schedule_id, subject_id, day_of_week, class_time)
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SCHEDULE} (
                 schedule_id SERIAL PRIMARY KEY,
-                id INT NOT NULL, 
-                name VARCHAR(255),
-                terms VARCHAR(100),
-                subject VARCHAR(255) NOT NULL,
-                day VARCHAR(20) NOT NULL,
-                time_start TIME WITHOUT TIME ZONE NOT NULL,
-                time_end TIME WITHOUT TIME ZONE NOT NULL,
-                CONSTRAINT fk_schedule_teacher FOREIGN KEY (id) 
-                    REFERENCES {TABLE_NAME_TEACHER} (id) 
-                    ON DELETE CASCADE ON UPDATE CASCADE
+                subject_id INT NOT NULL,
+                day_of_week VARCHAR(20) NOT NULL,
+                class_time TIME NOT NULL,
+                UNIQUE (subject_id, day_of_week, class_time),
+                CONSTRAINT fk_schedule_subject FOREIGN KEY (subject_id) 
+                    REFERENCES {TABLE_NAME_SUBJECT} (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
             );
         """)
-        
-        # STUDENT_SUBJECTS (enrollment_id, student_id, subject_id)
+
+        # STUDENT_SUBJECTS (student_id, subject_id) - Enrollment mapping
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_SUBJECTS} (
-                enrollment_id SERIAL PRIMARY KEY,
                 student_id INT NOT NULL,
                 subject_id INT NOT NULL,
-                enrolled_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (student_id, subject_id),
-                CONSTRAINT fk_enrollment_student FOREIGN KEY (student_id) 
+                PRIMARY KEY (student_id, subject_id),
+                CONSTRAINT fk_ss_student FOREIGN KEY (student_id) 
                     REFERENCES {TABLE_NAME_STUDENT} (id) ON DELETE CASCADE ON UPDATE CASCADE,
-                CONSTRAINT fk_enrollment_subject FOREIGN KEY (subject_id) 
+                CONSTRAINT fk_ss_subject FOREIGN KEY (subject_id) 
                     REFERENCES {TABLE_NAME_SUBJECT} (subject_id) ON DELETE CASCADE ON UPDATE CASCADE
             );
         """)
