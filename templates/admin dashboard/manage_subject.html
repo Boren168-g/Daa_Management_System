@@ -161,7 +161,7 @@
         <select name="teacher_id">
           <option value="">Select Teacher</option>
           {% for t in teachers %}
-            <option value="{{ t.ID }}">{{ t.Name }} (ID: {{ t.ID }})</option>
+            <option value="{{ t.id }}">{{ t.Name }} (ID: {{ t.id }})</option>
           {% endfor %}
         </select>
         <button type="submit" class="btn"><i class="fas fa-plus"></i> Add Subject</button>
@@ -199,7 +199,7 @@
               <div class="enrolled-students">
                 <h4><i class="fas fa-users"></i> Enrolled Students:</h4>
                 {% for student in s.enrolled_students %}
-                  <span class="student-badge">{{ student.Name }} (ID: {{ student.ID }})</span>
+                  <span class="student-badge">{{ student.Name }} (ID: {{ student.id }})</span>
                 {% endfor %}
               </div>
             </td>
@@ -213,7 +213,6 @@
     </div>
   </div>
 
-  <!-- Enroll Student Modal -->
   <div id="enrollModal" class="modal">
     <div class="modal-content">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
@@ -228,7 +227,7 @@
         <select name="student_id" id="studentSelect" required>
           <option value="">-- Select Student --</option>
           {% for student in all_students %}
-            <option value="{{ student.ID }}">{{ student.Name }} (ID: {{ student.ID }})</option>
+            <option value="{{ student.id }}">{{ student.Name }} (ID: {{ student.id }})</option>
           {% endfor %}
         </select>
         
@@ -269,7 +268,7 @@
 
     function closeEnrollModal() {
       document.getElementById('enrollModal').classList.remove('active');
-      document.getElementById('enrollForm').innerHTML = document.getElementById('enrollForm').innerHTML.replace(/<input[^>]+name="subject_id"[^>]*>/g, '');
+      document.getElementById('enrollForm').innerHTML = document.getElementById('enrollForm').innerHTML.replace(/<input[^>]+name="subject_id"[^>]*>/g, '',);
     }
 
     window.addEventListener('click', (e) => {
