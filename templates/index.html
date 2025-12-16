@@ -50,10 +50,10 @@
 
     <aside class="panel cta" aria-label="Actions">
       <div style="font-size:16px;font-weight:700">Sign in</div>
-      <a class="btn btn-primary" href="{{ url_for('administrators_page') }}">Administrator Login</a>
-      <a class="btn btn-primary" href="{{ url_for('teachers_page') }}">Teacher Login</a>
-      <a class="btn btn-primary" href="{{ url_for('students_page') }}">Student Login</a>
-      <a class="btn btn-primary" href="{{ url_for('parents_page') }}">Parent Login</a>
+      <a class="btn btn-primary" href="{{ url_for('login') }}?role=administrator">Administrator Login</a>
+      <a class="btn btn-primary" href="{{ url_for('login') }}?role=teacher">Teacher Login</a>
+      <a class="btn btn-primary" href="{{ url_for('login') }}?role=student">Student Login</a>
+      <a class="btn btn-primary" href="{{ url_for('login') }}?role=parent">Parent Login</a>
 
       <div style="height:1px;background:rgba(3,22,50,0.04);margin:12px 0;border-radius:2px"></div>
     </aside>
