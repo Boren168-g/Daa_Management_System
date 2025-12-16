@@ -146,7 +146,7 @@
           <tbody id="teachersTableBody">
             {% for t in teachers %}
             <tr>
-              <td>{{ t.ID }}</td>
+              <td>{{ t.id }}</td>
               <td class="teacher-name">{{ t.Name }}</td>
               <td>{{ t.Gender or '—' }}</td>
               <td>{{ t.Phone or '—' }}</td>
@@ -154,8 +154,8 @@
               <td>{{ t.subjects or '—' }}</td>
               <td>
                 <div class="actions">
-                  <a class="action-btn" href="{{ url_for('edit_teacher', id=t.ID) }}"><i class="fas fa-edit"></i> Edit</a>
-                  <form method="post" action="{{ url_for('delete_teacher', id=t.ID) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
+                  <a class="action-btn" href="{{ url_for('edit_teacher', id=t.id) }}"><i class="fas fa-edit"></i> Edit</a>
+                  <form method="post" action="{{ url_for('delete_teacher', id=t.id) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
                     <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
                   </form>
                 </div>
@@ -176,14 +176,14 @@
             <div class="avatar">{{ (t.Name or 'T')[:2]|upper }}</div>
             <div>
               <div style="font-weight:600" class="teacher-name">{{ t.Name }}</div>
-              <div style="font-size:0.9rem;color:#6b7280">ID: {{ t.ID }} • Gender: {{ t.Gender or '—' }}</div>
+              <div style="font-size:0.9rem;color:#6b7280">ID: {{ t.id }} • Gender: {{ t.Gender or '—' }}</div>
               <div style="font-size:0.9rem;color:#6b7280">Phone: {{ t.Phone or '—' }}</div>
               <div style="font-size:0.9rem;color:#6b7280">Subjects: {{ t.subjects or '—' }}</div>
             </div>
           </div>
           <div class="actions">
-            <a class="action-btn" href="{{ url_for('edit_teacher', id=t.ID) }}"><i class="fas fa-edit"></i> Edit</a>
-            <form method="post" action="{{ url_for('delete_teacher', id=t.ID) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
+            <a class="action-btn" href="{{ url_for('edit_teacher', id=t.id) }}"><i class="fas fa-edit"></i> Edit</a>
+            <form method="post" action="{{ url_for('delete_teacher', id=t.id) }}" style="display:inline" onsubmit="return confirm('Delete teacher {{ t.Name }}?');">
               <button type="submit" class="action-btn danger"><i class="fas fa-trash"></i> Delete</button>
             </form>
           </div>
