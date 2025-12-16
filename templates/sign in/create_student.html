@@ -24,7 +24,7 @@
           {% endif %}
         {% endwith %}
 
-        <form method="post" action="{{ url_for('create_student') }}" id="createStudent" novalidate>
+        <form method="post" action="{{ url_for('create_student') }}" id="createParent" novalidate>
           <div class="field">
             <label for="s_name">Name</label>
             <input id="s_name" name="name" class="input" type="text" placeholder="Full name" required>
