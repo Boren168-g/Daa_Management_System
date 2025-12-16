@@ -25,7 +25,7 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('signup') }}?role=administrator" id="createAdmin" novalidate>
+      <form method="post" action="{{ url_for('create_admin') }}" id="createAdmin" novalidate>
         <div class="field">
           <label for="admin_sname">Name</label>
           <input id="admin_sname" name="name" class="input" type="text" placeholder="Full name" required>
