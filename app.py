@@ -86,7 +86,7 @@ def signup():
     return render_template('sign_up_chooser.html')
 
 
-# --- ADMINISTRATOR ROUTES ---
+# --- ADMINISTRATOR ROUTES (FIXED) ---
 
 @app.route('/administrators', methods=['GET', 'POST'])
 def administrators_page():
@@ -98,7 +98,8 @@ def administrators_page():
             return redirect(url_for('administrators_page'))
         try:
             conn, cursor = get_db_conn()
-            cursor.execute(f'SELECT "ID", "Name", "Password" FROM {TABLE_NAME_ADMIN} WHERE "Name"=%s', (name,))
+            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_ADMIN} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -126,8 +127,9 @@ def create_admin():
             return redirect(url_for('create_admin'))
         try:
             conn, cursor = get_db_conn()
+            # FIX: Changed "Name", "Password" to name, password
             cursor.execute(
-                f'INSERT INTO {TABLE_NAME_ADMIN} ("Name", "Password") VALUES (%s, %s)',
+                f'INSERT INTO {TABLE_NAME_ADMIN} (name, password) VALUES (%s, %s)',
                 (name, password)
             )
             conn.commit()
@@ -144,7 +146,7 @@ def create_admin():
     return render_template('sign in/create_admin.html')
 
 
-# --- TEACHER ROUTES ---
+# --- TEACHER ROUTES (FIXED) ---
 
 @app.route('/teachers', methods=['GET', 'POST'])
 def teachers_page():
@@ -156,7 +158,8 @@ def teachers_page():
             return redirect(url_for('teachers_page'))
         try:
             conn, cursor = get_db_conn()
-            cursor.execute(f'SELECT "ID", "Name", "Password" FROM {TABLE_NAME_TEACHER} WHERE "Name"=%s', (name,))
+            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_TEACHER} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -185,8 +188,9 @@ def create_teacher():
             return redirect(url_for('create_teacher'))
         try:
             conn, cursor = get_db_conn()
+            # FIX: Changed quoted mixed-case column names to unquoted lowercase
             cursor.execute(
-                f'INSERT INTO {TABLE_NAME_TEACHER} ("Name", "Password", "Phone", "Gender") VALUES (%s, %s, %s, %s)',
+                f'INSERT INTO {TABLE_NAME_TEACHER} (name, password, phone, gender) VALUES (%s, %s, %s, %s)',
                 (name, password, phone, gender)
             )
             conn.commit()
@@ -203,7 +207,7 @@ def create_teacher():
     return render_template('sign in/create_teacher.html')
 
 
-# --- STUDENT ROUTES ---
+# --- STUDENT ROUTES (FIXED) ---
 
 @app.route('/students', methods=['GET', 'POST'])
 def students_page():
@@ -215,7 +219,8 @@ def students_page():
             return redirect(url_for('students_page'))
         try:
             conn, cursor = get_db_conn()
-            cursor.execute(f'SELECT "ID", "Name", "Password" FROM {TABLE_NAME_STUDENT} WHERE "Name"=%s', (name,))
+            # FIX: Changed "ID", "Name", "Password" to id, name, password
+            cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_STUDENT} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -244,16 +249,18 @@ def create_student():
             return redirect(url_for('create_student'))
         try:
             conn, cursor = get_db_conn()
+            # FIX: Changed quoted mixed-case column names to unquoted lowercase
             # 1. Insert into STUDENTS and get the new ID
             cursor.execute(
-                f'INSERT INTO {TABLE_NAME_STUDENT} ("Name", "Password", "Phone", "Gender") VALUES (%s, %s, %s, %s) RETURNING "ID"',
+                f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
             )
             new_id = cursor.fetchone()[0] 
             
             # 2. Insert into STUDENT_DATA (maintaining consistency)
+            # FIX: Changed quoted mixed-case column names to unquoted lowercase
             cursor.execute(
-                f'INSERT INTO {TABLE_NAME_STUDENT_DATA} ("ID", "Name", "Gender", "Password", "Phone") VALUES (%s, %s, %s, %s, %s)',
+                f'INSERT INTO {TABLE_NAME_STUDENT_DATA} (id, name, gender, password, phone) VALUES (%s, %s, %s, %s, %s)',
                 (new_id, name, gender, password, phone)
             )
 
@@ -271,7 +278,7 @@ def create_student():
     return render_template('sign in/create_student.html')
 
 
-# --- PARENT ROUTES ---
+# --- PARENT ROUTES (FIXED) ---
 
 @app.route('/parents', methods=['GET', 'POST'])
 def parents_page():
@@ -289,7 +296,8 @@ def parents_page():
 
         try:
             conn, cursor = get_db_conn()
-            cursor.execute(f'SELECT "ID", "Password" FROM {TABLE_NAME_PARENT} WHERE "ID"=%s', (parent_id,))
+            # FIX: Changed "ID", "Password" to id, password
+            cursor.execute(f'SELECT id, password FROM {TABLE_NAME_PARENT} WHERE id=%s', (parent_id,))
             row = cursor.fetchone()
             cursor.close()
             conn.close()
@@ -325,7 +333,7 @@ def create_parent():
         try:
             conn, cursor = get_db_conn()
             # Verify child exists
-            cursor.execute(f'SELECT "ID" FROM {TABLE_NAME_STUDENT} WHERE "ID"=%s', (child_int,))
+            cursor.execute(f'SELECT id FROM {TABLE_NAME_STUDENT} WHERE id=%s', (child_int,))
             student = cursor.fetchone()
             if not student:
                 flash('Student (child) ID not found.', 'error')
@@ -333,7 +341,8 @@ def create_parent():
                 return redirect(url_for('create_parent'))
 
             # Insert new parent record
-            cursor.execute(f'INSERT INTO {TABLE_NAME_PARENT} ("Password", "ChildrentID") VALUES (%s, %s) RETURNING "ID"',
+            # FIX: Changed "Password", "ChildrentID" to password, childrentid
+            cursor.execute(f'INSERT INTO {TABLE_NAME_PARENT} (password, childrentid) VALUES (%s, %s) RETURNING id',
                            (password, child_int))
             new_id = cursor.fetchone()[0]
             conn.commit()
@@ -351,7 +360,7 @@ def create_parent():
     return render_template('sign in/create_parent.html')
 
 
-# --- DASHBOARD & MANAGEMENT ROUTES ---
+# --- DASHBOARD & MANAGEMENT ROUTES (FIXED) ---
 
 @app.route('/dashboard')
 def dashboard():
@@ -379,12 +388,13 @@ def manage_students():
     students = []
     try:
         conn, cursor = get_db_conn(dict_cursor=True)
-        sql = f'SELECT "ID", "Name", "Gender", "Class", "Grade", "Password", "Phone" FROM {TABLE_NAME_STUDENT_DATA}'
+        # FIX: Changed quoted mixed-case column names to unquoted lowercase
+        sql = f'SELECT id, name, gender, class, grade, password, phone FROM {TABLE_NAME_STUDENT_DATA}'
         if q:
-            sql += ' WHERE "Name" ILIKE %s ORDER BY "ID"'
+            sql += ' WHERE name ILIKE %s ORDER BY id'
             cursor.execute(sql, (f"%{q}%",))
         else:
-            sql += ' ORDER BY "ID"'
+            sql += ' ORDER BY id'
             cursor.execute(sql)
         students = [dict(row) for row in cursor.fetchall()]
     except Exception as e:
@@ -419,24 +429,26 @@ def add_student():
             conn, cursor = get_db_conn()
 
             # 1. Insert into STUDENTS and use RETURNING to get the new ID (PostgreSQL standard)
+            # FIX: Changed quoted mixed-case column names to unquoted lowercase
             cursor.execute(
-                f'INSERT INTO {TABLE_NAME_STUDENT} ("Name", "Password", "Phone", "Gender") VALUES (%s, %s, %s, %s) RETURNING "ID"',
+                f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
             )
             new_id = cursor.fetchone()[0]
 
             # 2. Insert / update student_data with the new ID using ON CONFLICT (PostgreSQL standard)
+            # FIX: Changed quoted mixed-case column names to unquoted lowercase
             cursor.execute(
                 f"""
-                INSERT INTO {TABLE_NAME_STUDENT_DATA} ("ID","Name","Gender","Class","Grade","Password","Phone")
+                INSERT INTO {TABLE_NAME_STUDENT_DATA} (id, name, gender, class, grade, password, phone)
                 VALUES (%s,%s,%s,%s,%s,%s,%s)
-                ON CONFLICT ("ID") DO UPDATE SET
-                  "Name" = EXCLUDED."Name",
-                  "Gender" = EXCLUDED."Gender",
-                  "Class" = EXCLUDED."Class",
-                  "Grade" = EXCLUDED."Grade",
-                  "Password" = EXCLUDED."Password",
-                  "Phone" = EXCLUDED."Phone"
+                ON CONFLICT (id) DO UPDATE SET
+                  name = EXCLUDED.name,
+                  gender = EXCLUDED.gender,
+                  class = EXCLUDED.class,
+                  grade = EXCLUDED.grade,
+                  password = EXCLUDED.password,
+                  phone = EXCLUDED.phone
                 """,
                 (new_id, name, gender, class_, grade, password, phone)
             )
