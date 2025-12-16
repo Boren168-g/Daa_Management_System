@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
-import psycopg2 # CORRECT: Using PostgreSQL connector
+import psycopg2 # CRITICAL FIX: Using PostgreSQL connector
 from psycopg2 import extras
 from urllib.parse import urlparse
 from datetime import datetime
@@ -9,8 +9,7 @@ app = Flask(__name__)
 # Use a strong secret key from environment variable for production
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
-# --- PostgreSQL Connection Setup (Reads from DATABASE_URL) ---
-# NOTE: Replace the placeholder URL below with your actual Render/ElephantSQL URL if it's not set in your environment variables.
+# --- PostgreSQL Connection Setup ---
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -42,7 +41,7 @@ TABLE_NAME_STUDENT_SUBJECTS = "student_subjects"
 
 
 def get_db_conn(dict_cursor=False):
-    """Establishes a connection to the PostgreSQL database."""
+    """Establishes a connection to the PostgreSQL database. Raises error on failure."""
     conn = None
     cursor = None
     try:
@@ -53,8 +52,8 @@ def get_db_conn(dict_cursor=False):
             cursor = conn.cursor()
         return conn, cursor
     except Exception as e:
+        # CRITICAL: This allows the error to be caught by Flask and displayed/logged correctly.
         print(f"Database connection error: {e}")
-        # Raising the error is better for debugging the ISE
         raise 
 
 
@@ -98,7 +97,6 @@ def administrators_page():
             return redirect(url_for('administrators_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_ADMIN} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -110,10 +108,11 @@ def administrators_page():
             session['user_name'] = row[1]
             session['user_role'] = 'administrator'
             flash('Login successful.', 'success')
-            return redirect(url_for('dashboard')) # Redirect to dashboard
+            return redirect(url_for('dashboard'))
         except Exception as e:
             flash('Login error: ' + str(e), 'error')
             return redirect(url_for('administrators_page'))
+    # Using 'login/administrators.html' is standard for a clean project structure
     return render_template('login/administrators.html')
 
 
@@ -127,7 +126,6 @@ def create_admin():
             return redirect(url_for('create_admin'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase 'name', 'password'
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_ADMIN} (name, password) VALUES (%s, %s)',
                 (name, password)
@@ -143,6 +141,7 @@ def create_admin():
         except Exception as e:
             flash('Creation error: ' + str(e), 'error')
             return redirect(url_for('create_admin'))
+    # Using 'sign in/create_admin.html' based on your provided structure
     return render_template('sign in/create_admin.html')
 
 
@@ -158,7 +157,6 @@ def teachers_page():
             return redirect(url_for('teachers_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_TEACHER} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -188,7 +186,7 @@ def create_teacher():
             return redirect(url_for('create_teacher'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase column names
+            # Uses lowercase columns: name, password, phone, gender
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_TEACHER} (name, password, phone, gender) VALUES (%s, %s, %s, %s)',
                 (name, password, phone, gender)
@@ -219,7 +217,6 @@ def students_page():
             return redirect(url_for('students_page'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase 'id', 'name', 'password'
             cursor.execute(f'SELECT id, name, password FROM {TABLE_NAME_STUDENT} WHERE name=%s', (name,))
             row = cursor.fetchone()
             cursor.close()
@@ -249,14 +246,15 @@ def create_student():
             return redirect(url_for('create_student'))
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase column names
+            
+            # 1. Insert into STUDENTS and get the new ID
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
             )
             new_id = cursor.fetchone()[0] 
             
-            # FIX: Using lowercase column names in student_data
+            # 2. Insert into STUDENT_DATA (maintaining consistency)
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT_DATA} (id, name, gender, password, phone) VALUES (%s, %s, %s, %s, %s)',
                 (new_id, name, gender, password, phone)
@@ -281,7 +279,7 @@ def create_student():
 @app.route('/parents', methods=['GET', 'POST'])
 def parents_page():
     if request.method == 'POST':
-        pid = request.form.get('name', '').strip() # Expecting parent to input child's ID in 'name' field
+        pid = request.form.get('name', '').strip()
         password = request.form.get('password', '').strip()
         if not (pid and password):
             flash('All fields are required.', 'error')
@@ -294,7 +292,6 @@ def parents_page():
 
         try:
             conn, cursor = get_db_conn()
-            # FIX: Using lowercase 'id', 'password'
             cursor.execute(f'SELECT id, password FROM {TABLE_NAME_PARENT} WHERE id=%s', (parent_id,))
             row = cursor.fetchone()
             cursor.close()
@@ -365,8 +362,6 @@ def dashboard():
         flash('Please log in first.', 'error')
         return redirect(url_for('index'))
     
-    # This function is fine, as long as the database connection (get_db_conn) 
-    # doesn't fail on app startup/load. The previous fixes should resolve this.
     user_role = session.get('user_role', 'user')
     user_name = session.get('user_name', 'Guest')
     dashboard_map = {
@@ -387,7 +382,7 @@ def manage_students():
     students = []
     try:
         conn, cursor = get_db_conn(dict_cursor=True)
-        # FIX: Using lowercase column names
+        # Using lowercase column names
         sql = f'SELECT id, name, gender, class, grade, password, phone FROM {TABLE_NAME_STUDENT_DATA}'
         if q:
             sql += ' WHERE name ILIKE %s ORDER BY id'
@@ -427,7 +422,7 @@ def add_student():
         try:
             conn, cursor = get_db_conn()
 
-            # 1. Insert into STUDENTS and use RETURNING to get the new ID
+            # 1. Insert into STUDENTS and use RETURNING to get the new ID (lowercase 'id')
             cursor.execute(
                 f'INSERT INTO {TABLE_NAME_STUDENT} (name, password, phone, gender) VALUES (%s, %s, %s, %s) RETURNING id',
                 (name, password, phone, gender)
@@ -477,6 +472,4 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    # Do not run init_db here unless you are running locally and know what you are doing. 
-    # For Render/deployment, use a separate build script.
     app.run(debug=True)
