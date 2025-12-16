@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
-import psycopg2 # CRITICAL FIX: Using PostgreSQL connector
+import psycopg2 
 from psycopg2 import extras
 from urllib.parse import urlparse
 from datetime import datetime
@@ -373,6 +373,82 @@ def dashboard():
     template = dashboard_map.get(user_role, 'admin dashboard/dashboard_admin.html')
     return render_template(template, name=user_name, role=user_role)
 
+
+# --- NEW TEACHER MANAGEMENT ROUTES (Fix for BuildError) ---
+
+@app.route('/manage_teachers')
+def manage_teachers():
+    q = request.args.get('q', '').strip()
+    conn = None
+    cursor = None
+    teachers = []
+    try:
+        conn, cursor = get_db_conn(dict_cursor=True)
+        # Using lowercase column names: id, name, gender, phone
+        sql = f'SELECT id, name, gender, phone FROM {TABLE_NAME_TEACHER}'
+        if q:
+            sql += ' WHERE name ILIKE %s ORDER BY id'
+            cursor.execute(sql, (f"%{q}%",))
+        else:
+            sql += ' ORDER BY id'
+            cursor.execute(sql)
+        teachers = [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print("manage_teachers error:", e)
+        flash('Failed to load teachers: ' + str(e), 'error')
+    finally:
+        try:
+            if cursor: cursor.close()
+            if conn: conn.close()
+        except Exception:
+            pass
+    # NOTE: You must have a template named 'admin dashboard/manage_teachers.html'
+    return render_template('admin dashboard/manage_teachers.html', teachers=teachers)
+
+
+@app.route('/add_teacher', methods=['GET', 'POST'])
+def add_teacher():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        password = request.form.get('password', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+        gender = request.form.get('gender', 'other').strip().lower() or 'other'
+        
+        if not (name and password):
+            flash('Name and password are required.', 'error')
+            return redirect(url_for('add_teacher'))
+
+        conn = None
+        cursor = None
+        try:
+            conn, cursor = get_db_conn()
+
+            cursor.execute(
+                f'INSERT INTO {TABLE_NAME_TEACHER} (name, password, phone, gender) VALUES (%s, %s, %s, %s)',
+                (name, password, phone, gender)
+            )
+            conn.commit()
+
+            flash('Teacher added successfully.', 'success')
+            return redirect(url_for('manage_teachers'))
+        except psycopg2.errors.UniqueViolation:
+            flash('Teacher name already exists.', 'error')
+            return redirect(url_for('add_teacher'))
+        except Exception as e:
+            print('add_teacher error:', e)
+            flash('Failed to add teacher: ' + str(e), 'error')
+            return redirect(url_for('add_teacher'))
+        finally:
+            try:
+                if cursor: cursor.close()
+                if conn: conn.close()
+            except Exception:
+                pass
+
+    # NOTE: You must have a template named 'admin dashboard/add_teacher.html'
+    return render_template('admin dashboard/add_teacher.html')
+
+# --- EXISTING STUDENT MANAGEMENT ROUTES ---
 
 @app.route('/manage_students')
 def manage_students():
