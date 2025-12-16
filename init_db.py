@@ -1,6 +1,8 @@
 import os
 import psycopg2
 from urllib.parse import urlparse
+
+# --- PostgreSQL Connection Setup ---
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://daa_management_system_user:TTHSPLg694Qxw8rd6uRraRk9Bh8SirWn@dpg-d4vshipr0fns739s6gk0-a/daa_management_system"
@@ -20,7 +22,6 @@ TABLE_NAME_STUDENT_SUBJECTS = "student_subjects"
 def get_connection_details():
     """Parses the DATABASE_URL into a dictionary for psycopg2.connect."""
     url = urlparse(DATABASE_URL)
-    # The path is usually '/dbname', so we strip the first slash
     return {
         "dbname": url.path[1:],
         "user": url.username,
@@ -35,16 +36,13 @@ def init_db():
     """Initializes the PostgreSQL database and creates all tables."""
     conn = None
     try:
-        # Connect to the specific database
         print("Attempting to connect to the database...")
         conn = psycopg2.connect(**DB_CONN_DETAILS)
         conn.autocommit = True
         cursor = conn.cursor()
         print("Connection established. Creating tables...")
 
-        # --- Table Creation (PostgreSQL Dialect) ---
-
-        # ADMINISTRATORS (ID uses SERIAL for auto-increment)
+        # ADMINISTRATORS
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_ADMIN} (
                 "ID" SERIAL PRIMARY KEY,
@@ -80,14 +78,14 @@ def init_db():
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_PARENT} (
                 "ID" SERIAL PRIMARY KEY,
                 "Password" VARCHAR(255) NOT NULL,
-                "ChildrentID" INT UNIQUE, -- Parent is linked to one child
+                "ChildrentID" INT UNIQUE,
                 CONSTRAINT fk_parent_child FOREIGN KEY ("ChildrentID")
                     REFERENCES {TABLE_NAME_STUDENT} ("ID")
                     ON DELETE SET NULL ON UPDATE CASCADE
             );
         """)
 
-        # STUDENT_DATA (Used for class/grade info, linked 1:1 with STUDENTS)
+        # STUDENT_DATA
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_DATA} (
                 "ID" INT PRIMARY KEY,
@@ -119,7 +117,7 @@ def init_db():
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_SCHEDULE} (
                 schedule_id SERIAL PRIMARY KEY,
-                "ID" INT NOT NULL, -- Teacher ID
+                "ID" INT NOT NULL, 
                 "Name" VARCHAR(255),
                 "Terms" VARCHAR(100),
                 "Subject" VARCHAR(255) NOT NULL,
@@ -132,7 +130,7 @@ def init_db():
             );
         """)
         
-        # STUDENT_SUBJECTS (Many-to-Many enrollment)
+        # STUDENT_SUBJECTS
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {TABLE_NAME_STUDENT_SUBJECTS} (
                 enrollment_id SERIAL PRIMARY KEY,
@@ -171,13 +169,10 @@ def init_db():
         
     except Exception as e:
         print(f"Database initialization error: {e}")
-        # In a deployment environment, you might want to exit if the DB fails
         raise
     finally:
         if conn:
             conn.close()
 
 if __name__ == '__main__':
-    # This block should be executed as a pre-deploy step on Render
-    # e.g., in your build command: `python init_db.py && gunicorn app:app`
     init_db()
